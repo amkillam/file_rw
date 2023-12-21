@@ -1,6 +1,5 @@
 use std::fs::File;
 use zerocopy::AsBytes;
-use delegate::delegate;
 use memmap2::Mmap;
 
 #[derive(AsBytes)]

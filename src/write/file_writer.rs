@@ -115,7 +115,7 @@ impl<B: AsBytes, P: PathRef> FileWriter <P>{
         self.mmap
     }
 
-    pub fn to_reader(&self) -> FileReader {
+    pub fn to_reader(&self) -> FileReader<P> {
         FileReader::new(&self.path)
     }
 
