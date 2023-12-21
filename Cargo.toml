@@ -1,0 +1,13 @@
+[package]
+name = "file_rw"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+digest = { version = "0.10.7", features = ["core-api"] }
+memmap2 = "0.9.3"
+ouroboros = "0.18.1"
+sha3 = "0.10.8"
+zerocopy = { version = "0.7.32", features = ["derive", "simd"] }
