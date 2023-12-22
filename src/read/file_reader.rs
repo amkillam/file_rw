@@ -165,14 +165,14 @@ impl FileReader {
         //There are two good approaches to this - the nth match could be found by iterating
         //sequentially, then returning upon finding the nth match, or by finding all matches in
         //parallel, then sorting and returning the nth match. The second approach will generally be
-        //faster, despite the obvious overhead of finding all matches first then sorting, because it can be parallelized.
+        //faster, despite the obvious overhead/inefficiency of finding all matches first, then sorting, because it can be parallelized.
         //
         //This was initially implemented by breaking and returning the nth match in parallel
         //instead, but the nth match found when not parsing data sequentially is not guaranteed to
         //be the nth match in the file, so this was changed to the current approach.
 
         let mut offsets = self.find_bytes_all(bytes);
-        offsets.par_sort_unstable();
+        offsets.par_sort_unstable(); //offsets will not have overlapping values
         offsets.get(n).copied()
     }
 
