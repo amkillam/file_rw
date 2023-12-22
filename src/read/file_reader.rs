@@ -1,5 +1,5 @@
 use crate::file::open_as_read;
-use crate::{BytesRef, FileWriter};
+use crate::FileWriter;
 use digest::{Digest, Output};
 use filepath::FilePath;
 use memmap2::Mmap;

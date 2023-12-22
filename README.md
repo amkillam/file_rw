@@ -25,11 +25,6 @@ file_rw = "0.1.0"
 ## Reexports
 The library reexports the `FileReader` and `FileWriter` structs for external use.
 
-## Traits
-Additionally, it defines the following traits:
-- `PathRef`: Represents a reference to a file path
-- `BytesRef`: Represents a reference to a byte array
-
 ## Examples
 ```rust
 use file_rw::FileReader;

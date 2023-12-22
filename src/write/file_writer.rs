@@ -1,6 +1,6 @@
 use crate::{
     file::{open_as_append, open_as_write},
-    FileReader, PathRef,
+    FileReader
 };
 use filepath::FilePath;
 use memmap2::MmapMut;
@@ -10,7 +10,7 @@ use std::{fs::File, path::Path};
 /// It uses memory-mapped files for efficient file manipulation.
 pub struct FileWriter {
     mmap: Box<MmapMut>,
-    path: Box<dyn PathRef + Send + Sync>,
+    path: Box<dyn AsRef<Path> + Sync + Send + Send + Sync>,
 }
 
 impl FileWriter {
@@ -123,7 +123,7 @@ impl FileWriter {
     }
 
     /// Returns a reference to the path of the file being written to.
-    pub fn path(&mut self) -> &Box<dyn PathRef + Send + Sync> {
+    pub fn path(&mut self) -> &Box<dyn AsRef<Path> + Sync + Send + Send + Sync> {
         &self.path
     }
 
