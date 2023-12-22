@@ -1,6 +1,6 @@
 [package]
 name = "file_rw"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "A library for high-performance, memory-mapped file I/O utilities."
 cateogries = ["concurrency", "filesystem", "Rust Patterns"]
@@ -15,4 +15,3 @@ filepath = "0.1.2"
 memmap2 = "0.9.3"
 rayon = "1.8.0"
 sha3 = "0.10.8"
-
