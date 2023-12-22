@@ -26,8 +26,6 @@
 //! let content = reader.read_to_string();
 //! println!("File content: {}", content);
 //! ```
-//!
-//! For more details, refer to the [Rust documentation](https://doc.rust-lang.org/rustdoc/how-to-write-documentation.html).
 
 
 #![crate_name = "file_rw"]

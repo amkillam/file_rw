@@ -1,7 +1,7 @@
-# File_RW
 
-File_RW is a Rust library for efficient file reading and writing.
+# file_rw
 
+`file_rw` is a Rust library for high-performance, memory-mapped file reading and writing utilities.
 ## Features
 
 - High-performance file reading and writing capabilities
@@ -15,10 +15,7 @@ You can include the library in your Rust project by adding the following to your
 ```toml
 [dependencies]
 file_rw = "0.1.0"
-
-# file_rw
-
-`file_rw` is a Rust library for high-performance, memory-mapped file reading and writing utilities.
+```
 
 ## Modules
 - `file`: File operations
