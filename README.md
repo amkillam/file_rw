@@ -14,7 +14,7 @@ You can include the library in your Rust project by adding the following to your
 
 ```toml
 [dependencies]
-file_rw = "0.1.0"
+file_rw = "0.1.1"
 ```
 
 ## Modules
