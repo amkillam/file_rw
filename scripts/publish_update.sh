@@ -8,7 +8,7 @@ ensure_git_clean() {
 }
 
 get_current_version() {
-	version_line = $(grep -io "version = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"" Cargo.toml)
+	version_line="$(grep -io "version = \"[0-9].[0-9].[0-9]\"" Cargo.toml)"
 	echo "${version_line}" | cut -d '"' -f 2
 }
 
