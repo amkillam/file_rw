@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 ensure_git_clean() {
-	if [ "$(git status --porcelain)" != "" ]; then
+	if [ -n "$(git status --porcelain)" ]; then
 		echo "Git status is not clean. Please commit all changes before publishing."
 		exit 1
 	fi
@@ -68,10 +68,10 @@ main() {
 	echo "Current version: ${current_version}"
 	echo "New version: ${new_version}"
 
+	ensure_git_clean
 	update_readme_version "${current_version}" "${new_version}"
 	update_cargo_version "${current_version}" "${new_version}"
 
-	ensure_git_clean
 	git add README.md Cargo.toml
 	git commit -m "Release ${new_version}"
 	git tag -a "v${new_version}" -m "Release ${new_version}"
