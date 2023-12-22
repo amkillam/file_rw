@@ -1,7 +1,7 @@
 use std::fs::{OpenOptions, File};
 use std::path::Path;
 
-pub fn open_as_write<PathRef: AsRef<Path>>(path: PathRef) -> File {
+pub fn open_as_write(path: &Path) -> File {
     OpenOptions::new()
         .read(true)
         .write(true)
@@ -10,14 +10,14 @@ pub fn open_as_write<PathRef: AsRef<Path>>(path: PathRef) -> File {
         .unwrap_or_else(|err| panic!("Could not open file. Error: {}", err))
 }
 
-pub fn open_as_read<PathRef: AsRef<Path>>(path: PathRef) -> File {
+pub fn open_as_read(path: &Path) -> File {
     OpenOptions::new()
         .read(true)
         .open(path)
         .unwrap_or_else(|err| panic!("Could not open file. Error: {}", err))
 }
 
-pub fn open_as_append<PathRef: AsRef<Path>>(path: PathRef) -> File {
+pub fn open_as_append(path: &Path) -> File {
     OpenOptions::new()
         .read(true)
         .write(true)
