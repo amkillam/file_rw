@@ -1,34 +1,33 @@
-use rayon::prelude::*;
-use crate::{FileWriter, BytesRef};
-use memmap2::Mmap;
-use digest::{Output, Digest};
-use sha3::Sha3_256;
 use crate::file::open_as_read;
+use crate::{BytesRef, FileWriter};
+use digest::{Digest, Output};
+use filepath::FilePath;
+use memmap2::Mmap;
+use rayon::prelude::*;
+use sha3::Sha3_256;
 use std::fs::File;
 use std::path::Path;
-use filepath::FilePath;
 
 pub struct FileReader {
     mmap: Box<Mmap>,
-    path: Box<dyn AsRef<Path> + Send + Sync>
+    path: Box<dyn AsRef<Path> + Send + Sync>,
 }
 
 impl FileReader {
-
     fn new(file: &File, path: impl AsRef<Path> + Send + Sync) -> Self {
         let mmap = Box::new(unsafe {
-            Mmap::map(file)
-                .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
+            Mmap::map(file).unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
         });
         Self {
             mmap,
-           path:  Box::new(path.as_ref().to_path_buf())
+            path: Box::new(path.as_ref().to_path_buf()),
         }
     }
 
     pub fn open_file(file: &File) -> Self {
-        let file_path = file.path().unwrap_or_else(
-            |err| panic!("Could not get path of writer file. Error: {}", err));
+        let file_path = file
+            .path()
+            .unwrap_or_else(|err| panic!("Could not get path of writer file. Error: {}", err));
         Self::new(file, file_path)
     }
 
@@ -36,7 +35,6 @@ impl FileReader {
         let file = open_as_read(path.as_ref());
         Self::new(&file, path)
     }
-    
 
     pub fn read_to_string(&self) -> String {
         self.bytes().iter().map(|c| *c as char).collect::<String>()
@@ -55,7 +53,7 @@ impl FileReader {
     }
 
     pub fn mmap(&self) -> &Box<Mmap> {
-       &self.mmap
+        &self.mmap
     }
 
     pub fn path(&self) -> &Path {
@@ -65,7 +63,7 @@ impl FileReader {
     pub fn to_writer(&self) -> FileWriter {
         FileWriter::open(&self.path.as_ref())
     }
-    
+
     pub fn hash_with<H: Digest>(&self) -> Output<H> {
         H::digest(&self.bytes())
     }
@@ -73,8 +71,7 @@ impl FileReader {
         self.hash_with::<Sha3_256>()
     }
 
-    fn find_inner(&self, i: &usize, byte: &u8, bytes: &[u8]) -> Option<usize>
-  {
+    fn find_inner(&self, i: &usize, byte: &u8, bytes: &[u8]) -> Option<usize> {
         if byte == &bytes[0] {
             let mut offset = 1;
             while offset < bytes.len() {
@@ -93,52 +90,46 @@ impl FileReader {
         }
     }
 
-    
-      pub fn find_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
-           let bytes = bytes.as_ref();
-           let mmap_bytes = self.bytes();
-           mmap_bytes.into_par_iter().enumerate().find_map_first (
-                |(i, byte)| {
-                    self.find_inner(&i, &byte, bytes.as_ref())
-                
-                })}
-
-        pub fn rfind_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize>
-            {
-                let bytes = bytes.as_ref();
-                let mmap_bytes = self.bytes();
-            mmap_bytes.into_par_iter().enumerate().find_map_last(
-                |(i, byte)| {
-                    self.find_inner(&i, &byte, bytes.as_ref())
-                
-                })}
-                
-            
-
-        pub fn find_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize>
-    {
+    pub fn find_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
         let bytes = bytes.as_ref();
         let mmap_bytes = self.bytes();
-            mmap_bytes.into_par_iter().enumerate().filter_map(
-                |(i, byte)| {
-                    self.find_inner(&i, &byte, bytes)
-                
-                }).collect::<Vec<usize>>()
-            }
+        mmap_bytes
+            .into_par_iter()
+            .enumerate()
+            .find_map_first(|(i, byte)| self.find_inner(&i, &byte, bytes.as_ref()))
+    }
 
-    pub fn find_bytes_nth(&self, bytes: &impl AsRef<[u8]>, n: usize) -> Option<usize>
-            {
-                self.find_bytes_all(bytes).get(n).map(|i| *i)
+    pub fn rfind_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
+        let bytes = bytes.as_ref();
+        let mmap_bytes = self.bytes();
+        mmap_bytes
+            .into_par_iter()
+            .enumerate()
+            .find_map_last(|(i, byte)| self.find_inner(&i, &byte, bytes.as_ref()))
+    }
 
-                
+    pub fn find_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize> {
+        let bytes = bytes.as_ref();
+        let mmap_bytes = self.bytes();
+        mmap_bytes
+            .into_par_iter()
+            .enumerate()
+            .filter_map(|(i, byte)| self.find_inner(&i, &byte, bytes))
+            .collect::<Vec<usize>>()
+    }
 
-            }
-    pub fn compare_files(file_path1: impl AsRef<Path>  + Send + Sync, file_path2: impl AsRef<Path>  + Send + Sync) -> bool {
-        let file1_reader  = FileReader::open(&file_path1);
+    pub fn find_bytes_nth(&self, bytes: &impl AsRef<[u8]>, n: usize) -> Option<usize> {
+        self.find_bytes_all(bytes).get(n).map(|i| *i)
+    }
+    pub fn compare_files(
+        file_path1: impl AsRef<Path> + Send + Sync,
+        file_path2: impl AsRef<Path> + Send + Sync,
+    ) -> bool {
+        let file1_reader = FileReader::open(&file_path1);
         let file2_reader = FileReader::open(&file_path2);
         file1_reader.hash() == file2_reader.hash()
     }
-    
+
     pub fn compare_to(&self, file_path: impl AsRef<Path> + Send + Sync) -> bool {
         let file_reader = FileReader::open(&file_path);
         self.hash() == file_reader.hash()
@@ -152,7 +143,6 @@ impl FileReader {
     pub fn compare_hash<T: Digest>(&self, hash: &Output<T>) -> bool {
         self.hash_with::<T>() == *hash
     }
-
 }
 
 impl IntoIterator for FileReader {
@@ -178,6 +168,3 @@ impl PartialEq for FileReader {
         self.hash() == other.hash()
     }
 }
-
-
-

@@ -1,20 +1,19 @@
-use std::{ fs::File, path::Path};
+use std::{fs::File, path::Path};
 
-use crate::{FileReader,PathRef, file::{
-    open_as_append,
-    open_as_write,
-}};
-use memmap2::MmapMut;
+use crate::{
+    file::{open_as_append, open_as_write},
+    FileReader, PathRef,
+};
 use filepath::FilePath;
+use memmap2::MmapMut;
 
 pub struct FileWriter {
     mmap: Box<MmapMut>,
-    path: Box<dyn PathRef + Send + Sync>
+    path: Box<dyn PathRef + Send + Sync>,
 }
 
 impl FileWriter {
-
-    fn new<'a> (file: &File, path: impl AsRef<Path> + Send + Sync + 'static) -> Self {
+    fn new<'a>(file: &File, path: impl AsRef<Path> + Send + Sync + 'static) -> Self {
         let mmap = Box::new(unsafe {
             MmapMut::map_mut(file)
                 .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
@@ -22,13 +21,14 @@ impl FileWriter {
 
         Self {
             mmap,
-            path: Box::new(path)
+            path: Box::new(path),
         }
     }
 
     pub fn open_file(file: File) -> Self {
-        let path = file.path().unwrap_or_else(
-            |err| panic!("Could not get path of writer file. Error: {}", err));
+        let path = file
+            .path()
+            .unwrap_or_else(|err| panic!("Could not get path of writer file. Error: {}", err));
         Self::new(&file, path)
     }
 
@@ -42,8 +42,7 @@ impl FileWriter {
         FileWriter::open_file(file)
     }
 
-    pub fn write(
-        &mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+    pub fn write(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
         self.mmap[..].clone_from_slice(bytes.as_ref());
         self
     }
@@ -54,13 +53,7 @@ impl FileWriter {
         self
     }
 
-    pub fn find_replace (
-        &mut self, 
-        find: &impl AsRef<[u8]>,
-        replace: &impl AsRef<[u8]>,
-    ) -> &Self
-    {
-
+    pub fn find_replace(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
         let file_reader = FileReader::open(&*(self.path.as_ref().as_ref()));
@@ -68,30 +61,38 @@ impl FileWriter {
         match offset {
             Some(offset) => {
                 self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
-            },
-            None => ()
+            }
+            None => (),
         }
         self
     }
 
-    pub fn find_replace_nth(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>, n: usize) -> &Self {
+    pub fn find_replace_nth(
+        &mut self,
+        find: &impl AsRef<[u8]>,
+        replace: &impl AsRef<[u8]>,
+        n: usize,
+    ) -> &Self {
         let replace = replace.as_ref();
         let file_reader = FileReader::open(self.path.as_ref());
         let offset = file_reader.find_bytes_nth(&find, n);
         match offset {
             Some(offset) => {
                 self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
-            },
-            None => ()
+            }
+            None => (),
         }
         self
     }
-    
 
-    pub fn find_replace_all(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>) -> &Self {
+    pub fn find_replace_all(
+        &mut self,
+        find: &impl AsRef<[u8]>,
+        replace: &impl AsRef<[u8]>,
+    ) -> &Self {
         let replace = &replace.as_ref();
         let file_reader = FileReader::open(self.path.as_ref());
-        let find_results = file_reader.find_bytes_all(find);    
+        let find_results = file_reader.find_bytes_all(find);
         for offset in find_results {
             let _ = &mut self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
         }
@@ -108,12 +109,10 @@ impl FileWriter {
     }
 
     pub fn mmap(&mut self) -> &mut Box<MmapMut> {
-       &mut self.mmap
+        &mut self.mmap
     }
 
-    pub fn to_reader(&mut self) ->FileReader {
+    pub fn to_reader(&mut self) -> FileReader {
         FileReader::open(self.path.as_ref())
     }
-
-    
 }

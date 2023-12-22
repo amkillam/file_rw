@@ -1,4 +1,4 @@
-use std::fs::{OpenOptions, File};
+use std::fs::{File, OpenOptions};
 use std::path::Path;
 
 pub fn open_as_write(path: &Path) -> File {
