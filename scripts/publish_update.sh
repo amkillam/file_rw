@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 ensure_git_clean() {
-	if [ "$(git status --porcelain)" ]; then
+	if [ "$(git status --porcelain)" != "" ]; then
 		echo "Git status is not clean. Please commit all changes before publishing."
 		exit 1
 	fi
