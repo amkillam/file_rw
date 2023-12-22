@@ -3,16 +3,9 @@
 
 #![feature(trait_alias)]
 #![feature(associated_type_bounds)]
+#![feature(trivial_bounds)]
 
 use std::path::Path;
-
-use digest::{
-    core_api::{
-        AlgorithmName, BlockSizeUser, BufferKindUser, FixedOutputCore,
-        OutputSizeUser, Reset, UpdateCore,
-    },
-    HashMarker
-};
 
 mod read;
 mod write;
@@ -21,5 +14,5 @@ mod file;
 pub use read::FileReader;
 pub use write::FileWriter;
 
-pub trait HashFn = HashMarker + BlockSizeUser + BufferKindUser + OutputSizeUser + UpdateCore + FixedOutputCore + Default + Reset + AlgorithmName;
-pub trait PathRef = AsRef<Path>;
+pub trait PathRef =  AsRef<Path> + std::marker::Sync + std::marker::Send;
+pub trait BytesRef = AsRef<[u8]> + std::marker::Sync + std::marker::Send;

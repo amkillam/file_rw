@@ -1,122 +1,118 @@
-use ouroboros::self_referencing;
-use zerocopy::AsBytes;
-use crate::{FileReader, HashFn, PathRef, file::{
+use std::{ fs::File, path::Path};
+
+use crate::{FileReader,PathRef, file::{
     open_as_append,
     open_as_write,
-}, write::ZeroCopyMmapMut};
+}};
+use memmap2::MmapMut;
+use filepath::FilePath;
 
-#[self_referencing]
-pub struct FileWriter <P:PathRef> {
-    mmap: Box<ZeroCopyMmapMut>,
-    path: P,
-
-    #[borrows(mmap)]
-    mmap_ref: &'this mut Box<ZeroCopyMmapMut>,
-
-    #[borrows(path)]
-    path_ref: &'this P
+pub struct FileWriter {
+    mmap: Box<MmapMut>,
+    path: Box<dyn PathRef + Send + Sync>
 }
 
-impl<B: AsBytes, P: PathRef> FileWriter <P>{
-    pub fn open(path: &P) -> Self {
-        let file = open_as_write(&path);
-        let mut mmap = Box::new(unsafe {
-            ZeroCopyMmapMut::map_mut(&file)
+impl FileWriter {
+
+    fn new<'a> (file: &File, path: impl AsRef<Path> + Send + Sync + 'static) -> Self {
+        let mmap = Box::new(unsafe {
+            MmapMut::map_mut(file)
                 .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
         });
-        let mmap_ref = &mut mmap;
-        let path_ref = path;
-        let path = *path;
+
         Self {
             mmap,
-            path,
-            mmap_ref,
-            path_ref
+            path: Box::new(path)
         }
     }
 
-    pub fn open_append(path: &P) -> Self {
-        let file = open_as_append(&path);
-        let mut mmap = Box::new(unsafe {
-            ZeroCopyMmapMut::map_mut(&file)
-                .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
-        });
-        let mmap_ref = &mut mmap;
-        let path_ref = path;
-        let path = *path;
-        Self {
-            mmap,
-            path,
-            mmap_ref,
-            path_ref
-        }
+    pub fn open_file(file: File) -> Self {
+        let path = file.path().unwrap_or_else(
+            |err| panic!("Could not get path of writer file. Error: {}", err));
+        Self::new(&file, path)
     }
 
-    pub fn write(&self, bytes: &B) {
-        self.mmap_ref.bytes_mut().clone_from_slice(bytes.as_bytes())
+    pub fn open(path: impl AsRef<Path> + Send + Sync) -> Self {
+        let file = open_as_write(path.as_ref());
+        FileWriter::open_file(file)
     }
 
-    pub fn replace(&self, bytes: &B, offset: usize) {
-        let bytes = bytes.as_bytes();
-        self.mmap_ref[offset..offset + bytes.len()].clone_from_slice(bytes);
+    pub fn open_append(path: impl AsRef<Path> + Send + Sync) -> Self {
+        let file = open_as_append(path.as_ref());
+        FileWriter::open_file(file)
+    }
+
+    pub fn write(
+        &mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+        self.mmap[..].clone_from_slice(bytes.as_ref());
+        self
+    }
+
+    pub fn replace(&mut self, bytes: &impl AsRef<[u8]>, offset: usize) -> &Self {
+        let bytes = bytes.as_ref();
+        self.mmap[offset..offset + bytes.len()].clone_from_slice(bytes);
+        self
     }
 
     pub fn find_replace (
-        &self, 
-        find: &B,
-        replace: &B
-    ) -> Self
+        &mut self, 
+        find: &impl AsRef<[u8]>,
+        replace: &impl AsRef<[u8]>,
+    ) -> &Self
     {
-        let find = find.as_bytes();
-        let replace = replace.as_bytes();
-        let mut offset = FileReader::find(&self.mmap_ref, &find).unwrap_or_else(
-            return self
-        );
-        self.mmap_ref[offset..offset + replace.len()].clone_from_slice(replace);
-        Self
+
+        let find = find.as_ref();
+        let replace = replace.as_ref();
+        let file_reader = FileReader::open(&*(self.path.as_ref().as_ref()));
+        let offset = file_reader.find_bytes(&find);
+        match offset {
+            Some(offset) => {
+                self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+            },
+            None => ()
+        }
+        self
     }
 
-    pub fn find_replace_nth(&self, find: &B, replace: &B, n: usize) -> Self {
-        let find = find.as_bytes();
-        let replace = replace.as_bytes();
-        let mut offset = FileReader::find_nth(&self.mmap_ref, &find, n)?;
-        self.mmap_ref[offset..offset + replace.len()].clone_from_slice(replace);
-        Self
+    pub fn find_replace_nth(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>, n: usize) -> &Self {
+        let replace = replace.as_ref();
+        let file_reader = FileReader::open(self.path.as_ref());
+        let offset = file_reader.find_bytes_nth(&find, n);
+        match offset {
+            Some(offset) => {
+                self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+            },
+            None => ()
+        }
+        self
     }
     
 
-    pub fn find_replace_all(&self, find: &B, replace: &B) -> Self {
-        let find = find.as_bytes();
-        let replace = replace.as_bytes();
-        FileReader::find_all(&self.mmap_ref, &find).unwrap_or_else(
-            return Self
-        ).par_iter().for_each(|offset| {
-            self.mmap_ref[offset..offset + replace.len()].clone_from_slice(replace);
-        });
+    pub fn find_replace_all(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>) -> &Self {
+        let replace = &replace.as_ref();
+        let file_reader = FileReader::open(self.path.as_ref());
+        let find_results = file_reader.find_bytes_all(find);    
+        for offset in find_results {
+            let _ = &mut self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+        }
 
-        Self
-
+        self
     }
 
+    pub fn file(&mut self) -> File {
+        open_as_write(self.path.as_ref().as_ref())
+    }
 
-    pub fn path(&self) -> &P {
+    pub fn path(&mut self) -> &Box<dyn PathRef + Send + Sync> {
         &self.path
     }
 
-    pub fn path_deref(&self) -> P {
-        self.path
+    pub fn mmap(&mut self) -> &mut Box<MmapMut> {
+       &mut self.mmap
     }
 
-    pub fn zerocopy_mmap(&self) -> &mut Box<ZeroCopyMmapMut> {
-        self.mmap_ref
-    }
-
-    pub fn zerocopy_mmap_deref(&self) -> ZeroCopyMmapMut {
-        self.mmap
-    }
-
-    pub fn to_reader(&self) -> FileReader<P> {
-        FileReader::new(&self.path)
+    pub fn to_reader(&mut self) ->FileReader {
+        FileReader::open(self.path.as_ref())
     }
 
     
