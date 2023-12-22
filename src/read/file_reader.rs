@@ -89,6 +89,16 @@ impl FileReader {
         self.hash_with::<Sha3_256>()
     }
 
+    /// Computes the hash of the file data and returns it as a hex string.
+    pub fn hash_to_string(&self) -> String {
+        let hash = self.hash();
+        let mut hash_string = String::new();
+        for byte in hash {
+            hash_string.push_str(&format!("{:02x}", byte));
+        }
+        hash_string
+    }
+
     /// A private method that finds a sequence of bytes within the file.
     /// It takes a starting index `i`, a byte `byte`, and a byte sequence `bytes`.
     /// If the first byte of the sequence matches the provided byte, it checks the subsequent bytes.
