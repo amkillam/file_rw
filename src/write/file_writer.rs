@@ -1,22 +1,36 @@
 use crate::{
     file::{open_as_append, open_as_write},
-    FileReader
+    FileReader,
 };
 use filepath::FilePath;
 use memmap2::MmapMut;
-use std::{fs::File, path::Path};
+use std::{fmt, fs::File, path::Path};
 
 /// `FileWriter` is a structure that allows writing to a file.
 /// It uses memory-mapped files for efficient file manipulation.
 pub struct FileWriter {
     mmap: Box<MmapMut>,
-    path: Box<dyn AsRef<Path> + Sync + Send + Send + Sync>,
+    path: Box<dyn AsRef<Path> + Send + Sync>,
+}
+
+/// Writes "FileWriter({path})" to the provided formatter.
+impl fmt::Display for FileWriter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FileWriter({})", self.path.as_ref().as_ref().display())
+    }
+}
+
+/// Writes "FileWriter({Path})" to the provided formatter.
+impl fmt::Debug for FileWriter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FileWriter({})", self.path.as_ref().as_ref().display())
+    }
 }
 
 impl FileWriter {
     /// Creates a new `FileWriter` instance.
     /// It takes a reference to a `File` and a path, and maps the file into memory.
-    fn new<'a>(file: &File, path: impl AsRef<Path> + Send + Sync + 'static) -> Self {
+    fn new<'a>(file: &File, path: impl AsRef<Path> + Send + Sync + fmt::Debug + 'static) -> Self {
         let mmap = Box::new(unsafe {
             MmapMut::map_mut(file)
                 .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
@@ -123,7 +137,7 @@ impl FileWriter {
     }
 
     /// Returns a reference to the path of the file being written to.
-    pub fn path(&mut self) -> &Box<dyn AsRef<Path> + Sync + Send + Send + Sync> {
+    pub fn path(&mut self) -> &Box<dyn AsRef<Path> + Send + Sync> {
         &self.path
     }
 

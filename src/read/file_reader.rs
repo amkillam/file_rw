@@ -5,14 +5,27 @@ use filepath::FilePath;
 use memmap2::Mmap;
 use rayon::prelude::*;
 use sha3::Sha3_256;
-use std::fs::File;
-use std::path::Path;
+use std::{fmt, fs::File, path::Path};
 
 /// The FileReader struct represents a file reader that provides high-performance file reading capabilities.
 /// It uses memory mapping for efficient access to file data.
 pub struct FileReader {
     mmap: Box<Mmap>,
     path: Box<dyn AsRef<Path> + Send + Sync>,
+}
+
+impl fmt::Display for FileReader {
+    /// Displays the path of the file.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.path.as_ref().as_ref().display())
+    }
+}
+
+impl fmt::Debug for FileReader {
+    /// Displays the path of the file.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.path.as_ref().as_ref().display())
+    }
 }
 
 impl FileReader {

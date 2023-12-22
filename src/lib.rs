@@ -21,11 +21,10 @@
 //! println!("File content: {}", content);
 //! ```
 
-
 #![crate_name = "file_rw"]
 #![crate_type = "lib"]
 
-mod file;
+pub mod file; //mainly pub for use in tests
 mod read;
 mod write;
 
