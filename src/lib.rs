@@ -14,11 +14,22 @@
 //! ## Examples
 //!
 //! ```rust
-//! use file_rw::FileReader;
+//! use file_rw::{FileReader, FileWriter};
+//! use tempfile::tempdir;
 //!
-//! let reader = FileReader::open("example.txt");
+//! let tempdir = tempdir().unwrap();
+//! let tempdir_path = tempdir.path();
+//! let test_path = tempdir_path.join("test.txt");
+//! let mut writer = FileWriter::open(&test_path);
+//! writer.append(&"Hello World!"); //Hello World!
+//! writer.overwrite(&"Hello"); //Hello
+//! writer.write(&"Hullo"); //Hullo
+//! writer.find_replace_nth(&"l", &"r", 1); //Hulro
+//! writer.find_replace(&"o", &"ooooooo"); //Hulrooooooo
+//! writer.find_replace_all(&"o", &"d"); //Hulrddddddd
+//! let reader = FileReader::open(&test_path);
 //! let content = reader.read_to_string();
-//! println!("File content: {}", content);
+//! assert_eq!(content, "Hulrddddddd");
 //! ```
 
 #![crate_name = "file_rw"]
