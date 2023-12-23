@@ -595,7 +595,7 @@ dependencies = [
 
 [[package]]
 name = "file_rw"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "cargo-make",
  "digest",
