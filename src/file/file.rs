@@ -18,13 +18,3 @@ pub fn open_as_read(path: &Path) -> File {
         .open(path)
         .unwrap_or_else(|err| panic!("Could not open file. Error: {}", err))
 }
-
-/// Opens a file for appending and returns a `File` instance.
-pub fn open_as_append(path: &Path) -> File {
-    OpenOptions::new()
-        .read(true)
-        .write(true)
-        .append(true)
-        .open(path)
-        .unwrap_or_else(|err| panic!("Could not open file. Error: {}", err))
-}
