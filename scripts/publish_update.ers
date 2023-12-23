@@ -91,4 +91,39 @@ fn main() {
 
     update_readme_version(&current_version, &new_version);
     update_cargo_version(&current_version, &new_version);
+
+    Command::new("git")
+        .arg("add")
+        .arg("README.md")
+        .arg("Cargo.toml")
+        .arg("Cargo.lock")
+        .output()
+        .expect("failed to execute git add README.md Cargo.toml");
+    Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(format!("Release {}", new_version))
+        .output()
+        .expect("failed to execute git commit -m");
+    Command::new("git")
+        .arg("tag")
+        .arg("-a")
+        .arg(format!("v{}", new_version))
+        .arg("-m")
+        .arg(format!("Release {}", new_version))
+        .output()
+        .expect("failed to execute git tag -a");
+    Command::new("git")
+        .arg("push")
+        .arg("origin")
+        .arg("master")
+        .arg("--tags")
+        .output()
+        .expect("failed to execute git push origin master --tags");
+    Command::new("cargo")
+        .arg("publish")
+        .output()
+        .expect("failed to execute cargo publish");
+
+    println!("Successfully published version {}", new_version);
 }

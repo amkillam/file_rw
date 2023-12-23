@@ -17,17 +17,7 @@ command = "cargo"
 args = ["test"]
 dependencies = ["clean"]
 
-[tasks.publish_update_pre]
+[tasks.publish_update]
 dependencies = ["clean", "build", "test"]
 env = { CARGO_MAKE_PROJECT_VERSION = "${CARGO_MAKE_PROJECT_VERSION}" }
 script = { file = "${CARGO_MAKE_WORKING_DIRECTORY}/scripts/publish_update.ers", absolute_path = true }
-
-[tasks.publish_update]
-dependencies = ["publish_update_pre"]
-script = '''
-git add README.md Cargo.toml
-git commit -m "Release $new_version"
-git tag -a v$new_version -m "Release $new_version"
-git push origin master --tags
-cargo publish
-'''
