@@ -54,8 +54,8 @@ fn update_readme_version(old_version: &str, new_version: &str) {
 fn update_cargo_version(old_version: &str, new_version: &str) {
     let toml_file = std::fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
     let new_toml_file = toml_file.replace(
-        format!("version = {}", old_version).as_str(),
-        format!("version = {}", new_version).as_str(),
+        format!("version = \"{}\"", old_version).as_str(),
+        format!("version = \"{}\"", new_version).as_str(),
     );
     std::fs::write("Cargo.toml", new_toml_file).expect("failed to write Cargo.toml");
 }
