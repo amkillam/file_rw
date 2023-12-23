@@ -81,7 +81,7 @@ std::fs::write("README.md", new_readme_file).expect("failed to write README.md")
 
 fn update_cargo_version(old_version: &str, new_version: &str) {
 let toml_file = std::fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
-let new_toml_file = toml_file.replace(old_version, new_version);
+let new_toml_file = toml_file.replace(format!("version = {}",old_version), format!("version = {}", new_version));
 std::fs::write("Cargo.toml", new_toml_file).expect("failed to write Cargo.toml");
 }
 
@@ -134,7 +134,7 @@ let new_version = gen_new_version(&current_version, &release_type);
 println!("Current version: {}", current_version);
 println!("New version: {}", new_version);
 
-  update_readme_version(&current_version, &new_version);
+update_readme_version(&current_version, &new_version);
 update_cargo_version(&current_version, &new_version);
 
 
