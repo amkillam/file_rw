@@ -5,8 +5,7 @@
 //! clap = "4.4.11"
 //! ```
 
-use clap::{App, Arg};
-use std::fs::read_to_string;
+use clap::Arg;
 use std::process::Command;
 
 fn ensure_git_clean() {
@@ -19,16 +18,6 @@ fn ensure_git_clean() {
         println!("Git status is not clean. Please commit all changes before publishing.");
         std::process::exit(1);
     }
-}
-
-fn get_current_version() -> String {
-    let toml_file = std::fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
-    let version_line = toml_file
-        .lines()
-        .find(|line| line.contains("version ="))
-        .unwrap();
-    let version = version_line.split("\"").nth(1).unwrap();
-    version.to_string()
 }
 
 fn gen_new_version(old_version: &str, release_type: &str) -> String {
@@ -65,50 +54,29 @@ fn update_readme_version(old_version: &str, new_version: &str) {
 fn update_cargo_version(old_version: &str, new_version: &str) {
     let toml_file = std::fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
     let new_toml_file = toml_file.replace(
-        format!("version = {}", old_version),
-        format!("version = {}", new_version),
+        format!("version = {}", old_version).as_str(),
+        format!("version = {}", new_version).as_str(),
     );
     std::fs::write("Cargo.toml", new_toml_file).expect("failed to write Cargo.toml");
 }
 
 fn parse_args() -> String {
-    let matches = App::new("publish_update")
+    let matches = clap::Command::new("publish_update")
         .version("1.0")
         .author("Adam Killam <adammkillam@gmail.com>")
         .about("Publishes a new version of the crate")
         .arg(
-            Arg::with_name("release_type")
-                .help("major, minor, or patch")
-                .required(true)
-                .index(1),
+            Arg::new("release_type")
+                .long("release-type")
+                .short('r')
+                .help("The type fo release to publish - major, minor, or patch")
+                .required(true),
         )
         .get_matches();
     return matches
-        .value_of("release_type")
+        .get_one::<String>("release_type")
         .unwrap_or_else(|| panic!("Release type is required"))
         .to_string();
-}
-
-fn ensure_tests_pass() {
-    let output = Command::new("cargo")
-        .arg("test")
-        .output()
-        .expect("failed to execute cargo test");
-    if output.stdout.contains("FAILED") {
-        println!("Tests failed. Please fix before publishing.");
-        std::process::exit(1);
-    }
-}
-
-fn ensure_crate_builds() {
-    let output = Command::new("cargo")
-        .arg("build")
-        .output()
-        .expect("failed to execute cargo build");
-    if output.stdout.contains("error") {
-        println!("Crate does not build. Please fix before publishing.");
-        std::process::exit(1);
-    }
 }
 
 fn main() {
