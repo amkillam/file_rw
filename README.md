@@ -47,7 +47,7 @@ cargo add file_rw
 
 ## Reexports
 
-The library re-exports the `FileReader` and `FileWriter` structs for external use. These structs contain the aforementioned utilities.
+The crate re-exports the `FileReader` and `FileWriter` structs for external use. These structs contain the aforementioned utilities.
 
 ## Examples
 
