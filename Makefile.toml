@@ -95,7 +95,9 @@ let matches = App::new("publish")
       .required(true)
       .index(1))
     .get_matches();
-return matches.value_of("release_type").unwrap().to_string();
+return matches.value_of("release_type").unwrap_or_else(
+    || panic!("Release type is required")
+).to_string();
 }
 
 fn ensure_tests_pass() {
