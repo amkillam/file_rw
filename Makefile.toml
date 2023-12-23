@@ -20,7 +20,7 @@ dependencies = ["clean"]
 [tasks.publish_update_pre]
 dependencies = ["clean", "build", "test"]
 env = { CARGO_MAKE_PROJECT_VERSION = "${CARGO_MAKE_PROJECT_VERSION}" }
-script = { file = "${CARGO_MAKE_WORKING_DIRECTORY}/scripts/publish_update.rs", absolute_path = true }
+script = { file = "${CARGO_MAKE_WORKING_DIRECTORY}/scripts/publish_update.ers", absolute_path = true }
 
 [tasks.publish_update]
 dependencies = ["publish_update_pre"]
