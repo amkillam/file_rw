@@ -20,7 +20,7 @@
 
 - High-performance file reading and writing capabilities
 - Memory-mapped files for efficient access and manipulation
-- Support for opening files for reading, writing, and appending
+- High-level, efficient abstractions of common operations on file contents
 
 ## Installation
 
