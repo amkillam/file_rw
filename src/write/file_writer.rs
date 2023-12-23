@@ -1,7 +1,4 @@
-use crate::{
-    file::{open_as_append, open_as_write},
-    FileReader,
-};
+use crate::{file::open_as_write, FileReader};
 use filepath::FilePath;
 use memmap2::MmapMut;
 use std::{fmt, fs::File, path::Path};
@@ -58,12 +55,6 @@ impl FileWriter {
         FileWriter::open_file(file)
     }
 
-    /// Opens a file in append mode and returns a `FileWriter` instance.
-    pub fn open_append(path: impl AsRef<Path> + Send + Sync) -> Self {
-        let file = open_as_append(path.as_ref());
-        FileWriter::open_file(file)
-    }
-
     /// Writes bytes to the file.
     /// It replaces the entire content of the file with the provided bytes.
     pub fn write(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
@@ -71,10 +62,48 @@ impl FileWriter {
         self
     }
 
+    pub fn write_to_offset(&mut self, bytes: &impl AsRef<[u8]>, offset: usize) -> &Self {
+        self.mmap[offset..offset + bytes.as_ref().len()].clone_from_slice(bytes.as_ref());
+        self
+    }
+
+    pub fn append(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+        let current_len = self.mmap.len();
+        let bytes = bytes.as_ref();
+        let new_len = current_len + bytes.len();
+        self.set_len(new_len as u64);
+        self.mmap[current_len..new_len].clone_from_slice(bytes);
+        self
+    }
+
+    pub fn overwrite(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+        let bytes = bytes.as_ref();
+        let len = bytes.len();
+        self.set_len(len as u64);
+        self.write(&bytes);
+        self
+    }
+
+    pub fn bytes_mut(&mut self) -> &mut [u8] {
+        &mut self.mmap[..]
+    }
+
     /// Replaces a portion of the file content starting from the provided offset with the provided bytes.
     pub fn replace(&mut self, bytes: &impl AsRef<[u8]>, offset: usize) -> &Self {
         let bytes = bytes.as_ref();
         self.mmap[offset..offset + bytes.len()].clone_from_slice(bytes);
+        self
+    }
+
+    fn find_replace_inner(&mut self, find: &[u8], replace: &[u8], offset: usize) -> &Self {
+        if replace.len() > find.as_ref().len() {
+            let current_bytes = self.mmap[offset + find.len()..].to_vec();
+            self.extend_len_by((replace.len() - find.len()) as u64);
+            self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+            self.mmap[offset + replace.len()..].clone_from_slice(&current_bytes);
+        } else {
+            self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+        }
         self
     }
 
@@ -88,7 +117,7 @@ impl FileWriter {
 
         match offset {
             Some(offset) => {
-                self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+                self.find_replace_inner(&find, &replace, offset);
             }
             None => (),
         }
@@ -109,7 +138,7 @@ impl FileWriter {
         let offset = file_reader.find_bytes_nth(&find, n);
         match offset {
             Some(offset) => {
-                self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+                self.find_replace_inner(&find.as_ref(), &replace, offset);
             }
             None => (),
         }
@@ -126,7 +155,7 @@ impl FileWriter {
         let file_reader = FileReader::open(self.path.as_ref());
         let find_results = file_reader.find_bytes_all(find);
         for offset in find_results {
-            let _ = &mut self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
+            self.find_replace_inner(&find.as_ref(), &replace, offset);
         }
         self
     }
@@ -134,6 +163,27 @@ impl FileWriter {
     /// Returns a `File` object that represents the file being written to.
     pub fn file(&mut self) -> File {
         open_as_write(self.path.as_ref().as_ref())
+    }
+
+    pub fn len(&mut self) -> u64 {
+        self.file().metadata().unwrap().len()
+    }
+
+    pub fn set_len(&mut self, len: u64) -> &Self {
+        let file = self.file();
+        file.set_len(len).unwrap();
+        self.mmap = Box::new(unsafe {
+            MmapMut::map_mut(&file)
+                .unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
+        });
+        self
+    }
+
+    pub fn extend_len_by(&mut self, len: u64) -> &Self {
+        let current_len = self.len();
+        let new_len = current_len + len;
+        self.set_len(new_len);
+        self
     }
 
     /// Returns a reference to the path of the file being written to.
