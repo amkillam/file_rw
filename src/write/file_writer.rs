@@ -153,9 +153,9 @@ impl FileWriter {
     ) -> &Self {
         let replace = &replace.as_ref();
         let file_reader = FileReader::open(self.path.as_ref());
-        let find_results = file_reader.find_bytes_all(find);
+        let find_results = file_reader.find_bytes_all(find).unwrap();
         for offset in find_results {
-            self.find_replace_inner(&find.as_ref(), &replace, offset);
+            self.find_replace_inner(&find.as_ref(), &replace, offset.to_owned());
         }
         self
     }

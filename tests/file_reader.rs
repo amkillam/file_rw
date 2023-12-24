@@ -162,7 +162,7 @@ fn test_find_bytes_all() {
     let bytes = b"test";
     let expected_offsets = vec![8, 13, 18, 23];
 
-    assert_eq!(file.find_bytes_all(bytes), expected_offsets);
+    assert_eq!(file.find_bytes_all(bytes).unwrap(), expected_offsets);
 }
 
 #[test]

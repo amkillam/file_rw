@@ -10,6 +10,7 @@ readme = "README.md"
 repository = "https://github.com/amkillam/file_rw"
 
 [dependencies]
+ahash = "0.8.6"
 digest = { version = "0.10.7", features = ["core-api"] }
 filepath = "0.1.1"
 memmap2 = "0.9.3"

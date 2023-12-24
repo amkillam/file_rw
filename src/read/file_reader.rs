@@ -1,5 +1,6 @@
 use crate::file::open_as_read;
 use crate::FileWriter;
+use ahash::AHashMap;
 use digest::{Digest, Output};
 use filepath::FilePath;
 use memmap2::Mmap;
@@ -12,7 +13,7 @@ use std::{fmt, fs::File, path::Path};
 pub struct FileReader {
     mmap: Box<Mmap>,
     path: Box<dyn AsRef<Path> + Send + Sync>,
-    preprocess_cache: Box<Option<[Vec<usize>; 256]>>,
+    preprocess_cache: AHashMap<Box<[u8]>, Vec<usize>>,
 }
 
 impl fmt::Display for FileReader {
@@ -33,13 +34,19 @@ impl FileReader {
     /// Creates a new FileReader for a given file and path.
     /// It memory maps the file for efficient access.
     fn new(file: &File, path: impl AsRef<Path> + Send + Sync) -> Self {
+        let mmap = unsafe {
+            Mmap::map(file).unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
+        };
+        let mmap_bytes = &mmap[..];
+
+        //mmap cannot be copied or moved here. It must be cloned, but has no clone method. So it is cloned literally.
         let mmap = Box::new(unsafe {
             Mmap::map(file).unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
         });
         Self {
             mmap,
             path: Box::new(path.as_ref().to_path_buf()),
-            preprocess_cache: None,
+            preprocess_cache: Self::preprocess(&mmap_bytes),
         }
     }
 
@@ -112,115 +119,96 @@ impl FileReader {
             .collect::<String>()
     }
 
-    //Cache occurences of every possible 0x00 - 0xFF to know where to start in the future
-    //This could be implemented using an aho-corasick automaton, which would be slower
-    //in preprocessing, but faster in searching. This is optimised with the inversed tradeoff.
-    //Preprocessing is performed with the expectation that only a few searches will be performed,
-    //but more than one.
-    pub fn preprocess(&self) -> &Self {
-        const NEW_VEC: Vec<usize> = Vec::new();
-        let lookup_map = self
-            .bytes()
-            .par_iter()
-            .enumerate()
-            .fold(
-                || [NEW_VEC; 256],
-                |mut lookup_map: [Vec<usize>; 256], (i, byte)| {
-                    lookup_map[*byte as usize].push(i);
-                    lookup_map
-                },
-            )
+    //Hash and cache indices of all possible subsequences of data in parallel, for O(1) lookup.
+    //Extremely high space complexity and time complexity of processing compared to individual subsequence
+    //searching other wise, but only done once per file, and crucially, computed in parallel.
+    fn preprocess(bytes: &impl AsRef<[u8]>) -> AHashMap<Box<[u8]>, Vec<usize>> {
+        let bytes = bytes.as_ref();
+        let bytes_len = bytes.len();
+        let lookup_map: AHashMap<Box<[u8]>, Vec<usize>> = (1..bytes_len)
+            .into_par_iter()
+            .map(|i| {
+                bytes
+                    .par_windows(i)
+                    .enumerate()
+                    .fold(
+                        || AHashMap::new(),
+                        |mut lookup_map, (j, window)| {
+                            lookup_map
+                                .entry(Box::from(window))
+                                .or_insert_with(Vec::new)
+                                .push(j);
+                            lookup_map
+                        },
+                    )
+                    .reduce(
+                        || AHashMap::new(),
+                        |mut lookup_map1, lookup_map2| {
+                            for (key, value) in lookup_map2 {
+                                lookup_map1
+                                    .entry(key)
+                                    .or_insert_with(Vec::new)
+                                    .extend(value);
+                            }
+                            lookup_map1
+                        },
+                    )
+            })
             .reduce(
-                || [NEW_VEC; 256],
+                || AHashMap::new(),
                 |mut lookup_map1, lookup_map2| {
-                    lookup_map1
-                        .par_iter_mut()
-                        .zip(lookup_map2.par_iter())
-                        .for_each(|(vec1, vec2)| {
-                            vec1.extend(vec2);
-                            vec1.par_sort_unstable();
-                        });
+                    for (key, value) in lookup_map2 {
+                        lookup_map1
+                            .entry(key)
+                            .or_insert_with(Vec::new)
+                            .extend(value);
+                    }
                     lookup_map1
                 },
             );
-
-        self.preprocess_cache = Box::new(Some(lookup_map));
-        self
-    }
-
-    //Evaluate byte equality in parallel
-    fn find_inner_compare(&self, i: &usize, bytes: &[u8]) -> Option<usize> {
-        if self.bytes()[*i..*i + bytes.len()]
-            .par_iter()
-            .zip(bytes.par_iter())
-            .all(|(a, b)| a == b)
-        {
-            return Some(*i);
-        }
-        None
+        lookup_map
     }
 
     /// Finds the first occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns the index of the first occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn find_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
-        if self.preprocess_cache.is_none() {
-            self.preprocess();
-        }
-
         let bytes = bytes.as_ref();
-
-        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
-            .par_iter()
-            .find_map_first(|i| self.find_inner_compare(i, bytes))
+        self.preprocess_cache
+            .get(bytes)
+            .and_then(|v| v.first().copied())
     }
 
     /// Finds the last occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns the index of the last occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn rfind_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
-        if self.preprocess_cache.is_none() {
-            self.preprocess();
-        }
-
         let bytes = bytes.as_ref();
 
-        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
-            .par_iter()
-            .rev()
-            .find_map_first(|i| self.find_inner_compare(i, bytes))
+        self.preprocess_cache
+            .get(bytes)
+            .and_then(|v| v.last().copied())
     }
 
     /// Finds all occurrences of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns a vector of indices where the byte sequence is found.
-    pub fn find_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize> {
-        if self.preprocess_cache.is_none() {
-            self.preprocess();
-        }
-
+    pub fn find_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Option<Vec<usize>> {
         let bytes = bytes.as_ref();
 
-        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
-            .par_iter()
-            .filter_map(|i| self.find_inner_compare(i, bytes))
-            .collect::<Vec<usize>>()
+        self.preprocess_cache.get(bytes).map(|v| v.to_vec())
     }
 
     /// Finds all occurrences of a byte sequence in the file data, in reverse order.
     /// It takes a byte sequence `bytes` and returns a vector of indices where the byte sequence is found.
     /// The indices are sorted in reverse order.
-    pub fn rfind_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize> {
-        if self.preprocess_cache.is_none() {
-            self.preprocess();
-        }
-
+    pub fn rfind_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Option<Vec<usize>> {
         let bytes = bytes.as_ref();
 
-        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
-            .par_iter()
-            .rev()
-            .filter_map(|i| self.find_inner_compare(i, bytes))
-            .collect::<Vec<usize>>()
+        self.preprocess_cache.get(bytes).and_then(|v| {
+            let mut v = v.to_vec();
+            v.par_sort_unstable_by(|a, b| b.cmp(a));
+            Some(v)
+        })
     }
 
     /// Finds the nth occurrence of a byte sequence in the file data.
@@ -236,9 +224,7 @@ impl FileReader {
         //instead, but the nth match found when not parsing data sequentially is not guaranteed to
         //be the nth match in the file, so this was changed to the current approach.
 
-        let mut offsets = self.find_bytes_all(bytes);
-        offsets.par_sort_unstable(); //offsets will not have overlapping values
-        offsets.get(n).copied()
+        self.find_bytes_all(bytes).and_then(|v| v.get(n).copied())
     }
 
     /// Compares two files by their hashes.
