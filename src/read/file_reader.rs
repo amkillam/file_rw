@@ -12,6 +12,7 @@ use std::{fmt, fs::File, path::Path};
 pub struct FileReader {
     mmap: Box<Mmap>,
     path: Box<dyn AsRef<Path> + Send + Sync>,
+    preprocess_cache: Box<Option<[Vec<usize>; 256]>>,
 }
 
 impl fmt::Display for FileReader {
@@ -38,6 +39,7 @@ impl FileReader {
         Self {
             mmap,
             path: Box::new(path.as_ref().to_path_buf()),
+            preprocess_cache: None,
         }
     }
 
@@ -104,70 +106,120 @@ impl FileReader {
 
     /// Computes the hash of the file data and returns it as a hex string.
     pub fn hash_to_string(&self) -> String {
-        let hash = self.hash();
-        let mut hash_string = String::new();
-        for byte in hash {
-            hash_string.push_str(&format!("{:02x}", byte));
-        }
-        hash_string
+        let mut hash = self.hash();
+        hash.par_iter_mut()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<String>()
     }
 
-    /// A private method that finds a sequence of bytes within the file.
-    /// It takes a starting index `i`, a byte `byte`, and a byte sequence `bytes`.
-    /// If the first byte of the sequence matches the provided byte, it checks the subsequent bytes.
-    /// If all bytes match, it returns the starting index. Otherwise, it returns None.
-    fn find_inner(&self, i: &usize, byte: &u8, bytes: &[u8]) -> Option<usize> {
-        if byte == &bytes[0] {
-            let mut offset = 1;
-            while offset < bytes.len() {
-                if self.bytes()[i + offset] != bytes[offset] {
-                    break;
-                }
-                offset += 1;
-            }
-            if offset == bytes.len() {
-                Some(*i)
-            } else {
-                None
-            }
-        } else {
-            None
+    //Cache occurences of every possible 0x00 - 0xFF to know where to start in the future
+    //This could be implemented using an aho-corasick automaton, which would be slower
+    //in preprocessing, but faster in searching. This is optimised with the inversed tradeoff.
+    //Preprocessing is performed with the expectation that only a few searches will be performed,
+    //but more than one.
+    pub fn preprocess(&self) -> &Self {
+        const NEW_VEC: Vec<usize> = Vec::new();
+        let lookup_map = self
+            .bytes()
+            .par_iter()
+            .enumerate()
+            .fold(
+                || [NEW_VEC; 256],
+                |mut lookup_map: [Vec<usize>; 256], (i, byte)| {
+                    lookup_map[*byte as usize].push(i);
+                    lookup_map
+                },
+            )
+            .reduce(
+                || [NEW_VEC; 256],
+                |mut lookup_map1, lookup_map2| {
+                    lookup_map1
+                        .par_iter_mut()
+                        .zip(lookup_map2.par_iter())
+                        .for_each(|(vec1, vec2)| {
+                            vec1.extend(vec2);
+                            vec1.par_sort_unstable();
+                        });
+                    lookup_map1
+                },
+            );
+
+        self.preprocess_cache = Box::new(Some(lookup_map));
+        self
+    }
+
+    //Evaluate byte equality in parallel
+    fn find_inner_compare(&self, i: &usize, bytes: &[u8]) -> Option<usize> {
+        if self.bytes()[*i..*i + bytes.len()]
+            .par_iter()
+            .zip(bytes.par_iter())
+            .all(|(a, b)| a == b)
+        {
+            return Some(*i);
         }
+        None
     }
 
     /// Finds the first occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns the index of the first occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn find_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
+        if self.preprocess_cache.is_none() {
+            self.preprocess();
+        }
+
         let bytes = bytes.as_ref();
-        let mmap_bytes = self.bytes();
-        mmap_bytes
-            .into_par_iter()
-            .enumerate()
-            .find_map_first(|(i, byte)| self.find_inner(&i, &byte, bytes.as_ref()))
+
+        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
+            .par_iter()
+            .find_map_first(|i| self.find_inner_compare(i, bytes))
     }
 
     /// Finds the last occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns the index of the last occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn rfind_bytes(&self, bytes: &impl AsRef<[u8]>) -> Option<usize> {
+        if self.preprocess_cache.is_none() {
+            self.preprocess();
+        }
+
         let bytes = bytes.as_ref();
-        let mmap_bytes = self.bytes();
-        mmap_bytes
-            .into_par_iter()
-            .enumerate()
-            .find_map_last(|(i, byte)| self.find_inner(&i, &byte, bytes.as_ref()))
+
+        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
+            .par_iter()
+            .rev()
+            .find_map_first(|i| self.find_inner_compare(i, bytes))
     }
 
     /// Finds all occurrences of a byte sequence in the file data.
     /// It takes a byte sequence `bytes` and returns a vector of indices where the byte sequence is found.
     pub fn find_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize> {
+        if self.preprocess_cache.is_none() {
+            self.preprocess();
+        }
+
         let bytes = bytes.as_ref();
-        let mmap_bytes = self.bytes();
-        mmap_bytes
-            .into_par_iter()
-            .enumerate()
-            .filter_map(|(i, byte)| self.find_inner(&i, &byte, bytes))
+
+        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
+            .par_iter()
+            .filter_map(|i| self.find_inner_compare(i, bytes))
+            .collect::<Vec<usize>>()
+    }
+
+    /// Finds all occurrences of a byte sequence in the file data, in reverse order.
+    /// It takes a byte sequence `bytes` and returns a vector of indices where the byte sequence is found.
+    /// The indices are sorted in reverse order.
+    pub fn rfind_bytes_all(&self, bytes: &impl AsRef<[u8]>) -> Vec<usize> {
+        if self.preprocess_cache.is_none() {
+            self.preprocess();
+        }
+
+        let bytes = bytes.as_ref();
+
+        self.preprocess_cache.as_ref().unwrap()[bytes[0] as usize]
+            .par_iter()
+            .rev()
+            .filter_map(|i| self.find_inner_compare(i, bytes))
             .collect::<Vec<usize>>()
     }
 
