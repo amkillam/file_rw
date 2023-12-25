@@ -39,5 +39,6 @@ pub mod file; //mainly pub for use in tests
 mod read;
 mod write;
 
+pub use read::preprocess;
 pub use read::FileReader;
 pub use write::FileWriter;

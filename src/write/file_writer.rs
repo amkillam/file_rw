@@ -1,4 +1,11 @@
-use crate::{file::open_as_write, FileReader};
+use crate::{
+    file::open_as_write,
+    read::preprocess::{
+        preprocessor::{Preprocessor, Search},
+        ContinuousHashmap,
+    },
+    FileReader,
+};
 use filepath::FilePath;
 use memmap2::MmapMut;
 use std::{fmt, fs::File, path::Path};
@@ -57,17 +64,17 @@ impl FileWriter {
 
     /// Writes bytes to the file.
     /// It replaces the entire content of the file with the provided bytes.
-    pub fn write(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+    pub fn write(&mut self, bytes: impl AsRef<[u8]>) -> &Self {
         self.mmap[..].clone_from_slice(bytes.as_ref());
         self
     }
 
-    pub fn write_to_offset(&mut self, bytes: &impl AsRef<[u8]>, offset: usize) -> &Self {
+    pub fn write_to_offset(&mut self, bytes: impl AsRef<[u8]>, offset: usize) -> &Self {
         self.mmap[offset..offset + bytes.as_ref().len()].clone_from_slice(bytes.as_ref());
         self
     }
 
-    pub fn append(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+    pub fn append(&mut self, bytes: impl AsRef<[u8]>) -> &Self {
         let current_len = self.mmap.len();
         let bytes = bytes.as_ref();
         let new_len = current_len + bytes.len();
@@ -76,7 +83,7 @@ impl FileWriter {
         self
     }
 
-    pub fn overwrite(&mut self, bytes: &impl AsRef<[u8]>) -> &Self {
+    pub fn overwrite(&mut self, bytes: impl AsRef<[u8]>) -> &Self {
         let bytes = bytes.as_ref();
         let len = bytes.len();
         self.set_len(len as u64);
@@ -88,15 +95,35 @@ impl FileWriter {
         &mut self.mmap[..]
     }
 
+    pub fn bytes(&self) -> &[u8] {
+        &self.mmap[..]
+    }
+
+    ///Preprocess data with a given preprocessor for searching subsequences.
+    ///Preprocessors are any type which implements the Preprocessor trait
+    pub fn preprocess_with<T: Preprocessor>(&self) -> T {
+        T::new(self.bytes())
+    }
+
+    ///Preprocess data with the default processor,
+    /// which is the ContinuousHashmap. ContinuousHashmap performs
+    /// no initial preprocessing, but instead hashes and maps indices of all
+    /// windows of len m,
+    /// where m is the length of the pattern being searched for.
+    /// Essentially, this is a sensible default for most cases.
+    pub fn preprocess(&self) -> ContinuousHashmap {
+        ContinuousHashmap::new(self.bytes())
+    }
+
     /// Replaces a portion of the file content starting from the provided offset with the provided bytes.
-    pub fn replace(&mut self, bytes: &impl AsRef<[u8]>, offset: usize) -> &Self {
+    pub fn replace(&mut self, bytes: impl AsRef<[u8]>, offset: usize) -> &Self {
         let bytes = bytes.as_ref();
         self.mmap[offset..offset + bytes.len()].clone_from_slice(bytes);
         self
     }
 
     fn find_replace_inner(&mut self, find: &[u8], replace: &[u8], offset: usize) -> &Self {
-        if replace.len() > find.as_ref().len() {
+        if replace.len() > find.len() {
             let current_bytes = self.mmap[offset + find.len()..].to_vec();
             self.extend_len_by((replace.len() - find.len()) as u64);
             self.mmap[offset..offset + replace.len()].clone_from_slice(replace);
@@ -109,15 +136,19 @@ impl FileWriter {
 
     /// Finds a sequence of bytes in the file and replaces it with another sequence of bytes.
     /// If the sequence to find is not found, it does nothing.
-    pub fn find_replace(&mut self, find: &impl AsRef<[u8]>, replace: &impl AsRef<[u8]>) -> &Self {
+    pub fn find_replace(
+        &mut self,
+        find: impl AsRef<[u8]>,
+        replace: impl AsRef<[u8]>,
+        preprocessor: &mut (impl Preprocessor + Search),
+    ) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let file_reader = FileReader::open(&*(self.path.as_ref().as_ref()));
-        let offset = file_reader.find_bytes(&find);
+        let offset = preprocessor.find_bytes(self.bytes(), find);
 
         match offset {
             Some(offset) => {
-                self.find_replace_inner(&find, &replace, offset);
+                self.find_replace_inner(find, replace, offset);
             }
             None => (),
         }
@@ -129,16 +160,17 @@ impl FileWriter {
     /// If the slice to find is not found, no replacement occurs.
     pub fn find_replace_nth(
         &mut self,
-        find: &impl AsRef<[u8]>,
-        replace: &impl AsRef<[u8]>,
+        find: impl AsRef<[u8]>,
+        replace: impl AsRef<[u8]>,
         n: usize,
+        preprocessor: &mut (impl Preprocessor + Search),
     ) -> &Self {
+        let find = find.as_ref();
         let replace = replace.as_ref();
-        let file_reader = FileReader::open(self.path.as_ref());
-        let offset = file_reader.find_bytes_nth(&find, n);
+        let offset = preprocessor.find_bytes_nth(self.bytes(), find, n);
         match offset {
             Some(offset) => {
-                self.find_replace_inner(&find.as_ref(), &replace, offset);
+                self.find_replace_inner(find, replace, offset);
             }
             None => (),
         }
@@ -148,14 +180,15 @@ impl FileWriter {
     /// Finds all occurrences of a slice of bytes in the file and replaces them with another slice of bytes.
     pub fn find_replace_all(
         &mut self,
-        find: &impl AsRef<[u8]>,
-        replace: &impl AsRef<[u8]>,
+        find: impl AsRef<[u8]>,
+        replace: impl AsRef<[u8]>,
+        preprocessor: &mut (impl Preprocessor + Search),
     ) -> &Self {
-        let replace = &replace.as_ref();
-        let file_reader = FileReader::open(self.path.as_ref());
-        let find_results = file_reader.find_bytes_all(find).unwrap();
-        for offset in find_results {
-            self.find_replace_inner(&find.as_ref(), &replace, offset.to_owned());
+        let find = find.as_ref();
+        let replace = replace.as_ref();
+        let find_results = preprocessor.find_bytes_all(self.bytes(), find).unwrap();
+        for offset in &find_results {
+            self.find_replace_inner(find, replace, offset.to_owned());
         }
         self
     }

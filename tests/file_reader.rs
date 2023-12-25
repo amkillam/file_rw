@@ -1,3 +1,4 @@
+use file_rw::preprocess::{CharIndexMatrix, ContinuousHashmap, WindowsHashmap};
 use file_rw::FileReader;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha3::{Digest, Sha3_256};
@@ -140,7 +141,31 @@ fn test_find_bytes() {
     let bytes = b"test";
     let expected_offset = 8;
 
-    assert_eq!(file.find_bytes(bytes), Some(expected_offset));
+    let mut preprocess_cache_windows_hashmap = file.preprocess_with::<WindowsHashmap>();
+    let mut preprocess_cache_char_index_matrix = file.preprocess_with::<CharIndexMatrix>();
+    let mut preprocess_cache_continuous_hashmap = file.preprocess_with::<ContinuousHashmap>();
+
+    let mut preprocess_cache_default = file.preprocess();
+
+    assert_eq!(
+        file.find_bytes(bytes, &mut preprocess_cache_windows_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes(bytes, &mut preprocess_cache_char_index_matrix),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes(bytes, &mut preprocess_cache_continuous_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes(bytes, &mut preprocess_cache_default),
+        Some(expected_offset)
+    );
 }
 
 #[test]
@@ -151,7 +176,31 @@ fn test_rfind_bytes() {
     let bytes = b"test";
     let expected_offset = 23;
 
-    assert_eq!(file.rfind_bytes(bytes), Some(expected_offset));
+    let mut preprocess_cache_windows_hashmap = file.preprocess_with::<WindowsHashmap>();
+    let mut preprocess_cache_char_index_matrix = file.preprocess_with::<CharIndexMatrix>();
+    let mut preprocess_cache_continuous_hashmap = file.preprocess_with::<ContinuousHashmap>();
+
+    let mut preprocess_cache_default = file.preprocess();
+
+    assert_eq!(
+        file.rfind_bytes(bytes, &mut preprocess_cache_windows_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.rfind_bytes(bytes, &mut preprocess_cache_char_index_matrix),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.rfind_bytes(bytes, &mut preprocess_cache_continuous_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.rfind_bytes(bytes, &mut preprocess_cache_default),
+        Some(expected_offset)
+    );
 }
 
 #[test]
@@ -162,7 +211,30 @@ fn test_find_bytes_all() {
     let bytes = b"test";
     let expected_offsets = vec![8, 13, 18, 23];
 
-    assert_eq!(file.find_bytes_all(bytes).unwrap(), expected_offsets);
+    let mut preprocess_cache_windows_hashmap = file.preprocess_with::<WindowsHashmap>();
+    let mut preprocess_cache_char_index_matrix = file.preprocess_with::<CharIndexMatrix>();
+    let mut preprocess_cache_continuous_hashmap = file.preprocess_with::<ContinuousHashmap>();
+    let mut preprocess_cache_default = file.preprocess();
+
+    assert_eq!(
+        file.find_bytes_all(bytes, &mut preprocess_cache_windows_hashmap),
+        Some(expected_offsets.clone())
+    );
+
+    assert_eq!(
+        file.find_bytes_all(bytes, &mut preprocess_cache_char_index_matrix),
+        Some(expected_offsets.clone())
+    );
+
+    assert_eq!(
+        file.find_bytes_all(bytes, &mut preprocess_cache_continuous_hashmap),
+        Some(expected_offsets.clone())
+    );
+
+    assert_eq!(
+        file.find_bytes_all(bytes, &mut preprocess_cache_default),
+        Some(expected_offsets.clone())
+    );
 }
 
 #[test]
@@ -173,7 +245,32 @@ fn test_find_bytes_nth() {
     let bytes = b"test";
     let expected_offset = 13;
 
-    assert_eq!(file.find_bytes_nth(bytes, 1), Some(expected_offset));
+    // assert_eq!(file.find_bytes_nth(bytes, 1), Some(expected_offset));
+
+    let mut preprocess_cache_windows_hashmap = file.preprocess_with::<WindowsHashmap>();
+    let mut preprocess_cache_char_index_matrix = file.preprocess_with::<CharIndexMatrix>();
+    let mut preprocess_cache_continuous_hashmap = file.preprocess_with::<ContinuousHashmap>();
+    let mut preprocess_cache_default = file.preprocess();
+
+    assert_eq!(
+        file.find_bytes_nth(bytes, 1, &mut preprocess_cache_windows_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes_nth(bytes, 1, &mut preprocess_cache_char_index_matrix),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes_nth(bytes, 1, &mut preprocess_cache_continuous_hashmap),
+        Some(expected_offset)
+    );
+
+    assert_eq!(
+        file.find_bytes_nth(bytes, 1, &mut preprocess_cache_default),
+        Some(expected_offset)
+    );
 }
 
 #[test]
