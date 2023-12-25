@@ -5,6 +5,9 @@ use rayon::{
     slice::{ParallelSlice, ParallelSliceMut},
 };
 
+/// A preprocessor that uses a hashmap of all possible subsequences of
+/// given data to search byte sequences.
+/// O(n^2) preprocessing time, O(n^2) space complexity. O(1) search time
 pub fn hash_windows(bytes: &[u8], pattern_len: usize) -> AHashMap<Box<[u8]>, Vec<usize>> {
     bytes
         .par_windows(pattern_len)
