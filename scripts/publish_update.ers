@@ -69,7 +69,7 @@ fn parse_args() -> String {
             Arg::new("release_type")
                 .long("release-type")
                 .short('r')
-                .help("The type fo release to publish - major, minor, or patch")
+                .help("The type of release to publish - major, minor, or patch")
                 .required(true),
         )
         .get_matches();
