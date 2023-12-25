@@ -14,7 +14,7 @@
 //! ## Examples
 //!
 //! ```rust
-//! use file_rw::{FileReader, FileWriter};
+//! use file_rw::{FileReader, FileWriter, preprocess::ContinuousHashmap};
 //! use tempfile::tempdir;
 //!
 //! let tempdir = tempdir().unwrap();
@@ -24,12 +24,17 @@
 //! writer.append(&"Hello World!"); //Hello World!
 //! writer.overwrite(&"Hello"); //Hello
 //! writer.write(&"Hullo"); //Hullo
-//! writer.find_replace_nth(&"l", &"r", 1); //Hulro
-//! writer.find_replace(&"o", &"ooooooo"); //Hulrooooooo
-//! writer.find_replace_all(&"o", &"d"); //Hulrddddddd
+//!
+//! let mut preprocess_cache = writer.preprocess_with::<ContinuousHashmap>();
+//! writer.find_replace_nth("l", "y", 0, &mut preprocess_cache); //Huylo
+//! writer.find_replace("u", "e", &mut preprocess_cache); //Heylo
+//! writer.find_replace("lo", "yyy", &mut preprocess_cache); //Heyyyy
+//! let mut preprocess_cache = writer.preprocess();
+//! writer.find_replace_all("y", "i", &mut preprocess_cache); //Heiiii
+//! writer.find_replace("e", "i", &mut preprocess_cache); //Hiiiii
 //! let reader = FileReader::open(&test_path);
 //! let content = reader.read_to_string();
-//! assert_eq!(content, "Hulrddddddd");
+//! assert_eq!(content, "Hiiiii");
 //! ```
 
 #![crate_name = "file_rw"]
