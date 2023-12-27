@@ -1,13 +1,13 @@
 use file_rw::{
-    file,
     preprocess::{CharIndexMatrix, ContinuousHashmap, WindowsHashmap},
     FileReader, FileWriter,
 };
 use std::fs::OpenOptions;
 use tempfile::tempdir;
+use test_utils::for_each_preprocessor;
+
 #[cfg(test)]
 #[test]
-
 fn test_open_file() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
@@ -106,93 +106,48 @@ fn test_replace() {
 fn test_find_replace() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let mut file_writer = FileWriter::open(tempdir_path.join("test_find_replace"));
-    file_writer.overwrite("Hello, world!");
-    let file_reader = FileReader::open(tempdir_path.join("test_find_replace"));
-
-    let mut preprocess_cache_windows_hashmap = file_writer.preprocess_with::<WindowsHashmap>();
-    let mut preprocess_cache_char_index_matrix = file_writer.preprocess_with::<CharIndexMatrix>();
-    let mut preprocess_cache_continuous_hashmap =
-        file_writer.preprocess_with::<ContinuousHashmap>();
-    let mut preprocess_cache_default = file_writer.preprocess();
-
-    file_writer.find_replace("Hello", "world", &mut preprocess_cache_windows_hashmap);
-    assert_eq!(file_reader.read_to_string(), "world, world!");
-    file_writer.overwrite("Hello, world!");
-    assert_eq!(file_reader.read_to_string(), "Hello, world!");
-
-    file_writer.find_replace("Hello", "world", &mut preprocess_cache_char_index_matrix);
-    assert_eq!(file_reader.read_to_string(), "world, world!");
+    let test_file_path = tempdir_path.join("test_find_replace");
+    let mut file_writer = FileWriter::open(&test_file_path);
     file_writer.overwrite("Hello, world!");
 
-    file_writer.find_replace("Hello", "world", &mut preprocess_cache_continuous_hashmap);
-    assert_eq!(file_reader.read_to_string(), "world, world!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace("Hello", "world", &mut preprocess_cache_default);
-    assert_eq!(file_reader.read_to_string(), "world, world!");
+for_each_preprocessor!(file_writer, |preprocessor| {
+        file_writer.find_replace("Hello", "world", &mut preprocessor);
+        let file_reader = FileReader::open(&test_file_path);
+        assert_eq!(file_reader.read_to_string(), "world, world!");
+        file_writer.overwrite("Hello, world!");
+    });
 }
 
 #[test]
 fn test_find_replace_nth() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let mut file_writer = FileWriter::open(tempdir_path.join("test_find_replace_nth"));
-    file_writer.overwrite("Hello, world!");
-    let file_reader = FileReader::open(tempdir_path.join("test_find_replace_nth"));
-
-    let mut preprocess_cache_windows_hashmap = file_writer.preprocess_with::<WindowsHashmap>();
-    let mut preprocess_cache_char_index_matrix = file_writer.preprocess_with::<CharIndexMatrix>();
-    let mut preprocess_cache_continuous_hashmap =
-        file_writer.preprocess_with::<ContinuousHashmap>();
-    let mut preprocess_cache_default = file_writer.preprocess();
-
-    assert_eq!(file_reader.read_to_string(), "Hello, world!");
-    file_writer.find_replace_nth("o", "a", 1, &mut preprocess_cache_windows_hashmap);
-    let file_reader = FileReader::open(tempdir_path.join("test_find_replace_nth"));
-    assert_eq!(file_reader.read_to_string(), "Hello, warld!");
+    let test_file_path = tempdir_path.join("test_find_replace_nth");
+    let mut file_writer = FileWriter::open(&test_file_path);
     file_writer.overwrite("Hello, world!");
 
-    file_writer.find_replace_nth("o", "a", 1, &mut preprocess_cache_char_index_matrix);
-    assert_eq!(file_reader.read_to_string(), "Hello, warld!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace_nth("l", "y", 0, &mut preprocess_cache_continuous_hashmap);
-    assert_eq!(file_reader.read_to_string(), "Heylo, world!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace_nth("o", "a", 1, &mut preprocess_cache_default);
-    assert_eq!(file_reader.read_to_string(), "Hello, warld!");
+    for_each_preprocessor!(file_writer, |preprocessor| {
+        file_writer.find_replace_nth("o", "a", 1, &mut preprocessor);
+        let file_reader = FileReader::open(&test_file_path);
+        assert_eq!(file_reader.read_to_string(), "Hello, warld!");
+        file_writer.overwrite("Hello, world!");
+    });
 }
 
 #[test]
 fn test_find_replace_all() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let mut file_writer = FileWriter::open(tempdir_path.join("test_find_replace_all"));
+    let test_file_path = tempdir_path.join("test_find_replace_all");
+    let mut file_writer = FileWriter::open(&test_file_path);
     file_writer.overwrite("Hello, world!");
 
-    let mut preprocess_cache_windows_hashmap = file_writer.preprocess_with::<WindowsHashmap>();
-    let mut preprocess_cache_char_index_matrix = file_writer.preprocess_with::<CharIndexMatrix>();
-    let mut preprocess_cache_continuous_hashmap =
-        file_writer.preprocess_with::<ContinuousHashmap>();
-    let mut preprocess_cache_default = file_writer.preprocess();
-
-    file_writer.find_replace_all("o", "a", &mut preprocess_cache_windows_hashmap);
-    let file_reader = FileReader::open(tempdir_path.join("test_find_replace_all"));
-    assert_eq!(file_reader.read_to_string(), "Hella, warld!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace_all("o", "a", &mut preprocess_cache_char_index_matrix);
-    assert_eq!(file_reader.read_to_string(), "Hella, warld!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace_all("o", "a", &mut preprocess_cache_continuous_hashmap);
-    assert_eq!(file_reader.read_to_string(), "Hella, warld!");
-    file_writer.overwrite("Hello, world!");
-
-    file_writer.find_replace_all("o", "a", &mut preprocess_cache_default);
-    assert_eq!(file_reader.read_to_string(), "Hella, warld!");
+    for_each_preprocessor!(file_writer, |preprocessor| {
+        file_writer.find_replace_all("o", "a", &mut preprocessor);
+        let file_reader = FileReader::open(&test_file_path);
+        assert_eq!(file_reader.read_to_string(), "Hella, warld!");
+        file_writer.overwrite("Hello, world!");
+    });
 }
 
 #[test]

@@ -619,6 +619,7 @@ dependencies = [
  "rust-script",
  "sha3",
  "tempfile",
+ "test_utils",
 ]
 
 [[package]]
@@ -1512,6 +1513,10 @@ checksum = "ff1bc3d3f05aff0403e8ac0d92ced918ec05b666a43f83297ccef5bea8a3d449"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "test_utils"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"
