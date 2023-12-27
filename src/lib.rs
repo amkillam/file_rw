@@ -21,9 +21,9 @@
 //! let tempdir_path = tempdir.path();
 //! let test_path = tempdir_path.join("test.txt");
 //! let mut writer = FileWriter::open(&test_path);
-//! writer.append(&"Hello World!"); //Hello World!
-//! writer.overwrite(&"Hello"); //Hello
-//! writer.write(&"Hullo"); //Hullo
+//! writer.append("Hello World!"); //Hello World!
+//! writer.overwrite("Hello"); //Hello
+//! writer.write("Hullo"); //Hullo
 //!
 //! let mut preprocess_cache = writer.preprocess_with::<ContinuousHashmap>();
 //! writer.find_replace_nth("l", "y", 0, &mut preprocess_cache); //Huylo
