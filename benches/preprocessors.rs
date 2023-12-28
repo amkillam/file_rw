@@ -35,10 +35,6 @@ macro_rules! for_each_preprocessor{
         let mut $preprocessor = $file_writer.preprocess_with::<WindowsHashmap>();
         let $preprocessor_type_str = "WindowsHashmap";
        $benchmark_block
-
-        let mut $preprocessor = $file_writer.preprocess();
-        let $preprocessor_type_str = "Default(ContinuousHashmap)";
-       $benchmark_block
     };
 }
 
@@ -162,83 +158,6 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
         let data = gen_dataset(*size);
         file_writer.overwrite(&data);
         let find_replace_n_triplets = gen_find_replace_n_triplets(*size);
-        benchmark_with_group!(criterion, "find_replace_nth", size, |benchmark_group| {
-            for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
-                benchmark_group.bench_with_input(
-                    BenchmarkId::new(preprocessor_type_str, size),
-                    &size,
-                    |b, &_s| {
-                        b.iter(|| {
-                            benchmark_find_replace_nth(
-                                black_box(&mut preprocessor),
-                                black_box(&mut file_writer),
-                                black_box(&find_replace_n_triplets),
-                            );
-                        });
-                    },
-                );
-                file_writer.overwrite(&data);
-            });
-            benchmark_group.finish();
-        });
-        benchmark_with_group!(criterion, "find_replace", size, |benchmark_group| {
-            for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
-                benchmark_group.bench_with_input(
-                    BenchmarkId::new(preprocessor_type_str, size),
-                    &size,
-                    |b, &_s| {
-                        b.iter(|| {
-                            benchmark_find_replace(
-                                black_box(&mut preprocessor),
-                                black_box(&mut file_writer),
-                                black_box(&find_replace_n_triplets),
-                            );
-                        });
-                    },
-                );
-                file_writer.overwrite(&data);
-            });
-            benchmark_group.finish();
-        });
-        benchmark_with_group!(criterion, "rfind_replace_nth", size, |benchmark_group| {
-            for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
-                benchmark_group.bench_with_input(
-                    BenchmarkId::new(preprocessor_type_str, size),
-                    &size,
-                    |b, &_s| {
-                        b.iter(|| {
-                            benchmark_rfind_replace_nth(
-                                black_box(&mut preprocessor),
-                                black_box(&mut file_writer),
-                                black_box(&find_replace_n_triplets),
-                            );
-                        });
-                    },
-                );
-                file_writer.overwrite(&data);
-            });
-            benchmark_group.finish();
-        });
-        benchmark_with_group!(criterion, "rfind_replace", size, |benchmark_group| {
-            for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
-                benchmark_group.bench_with_input(
-                    BenchmarkId::new(preprocessor_type_str, size),
-                    &size,
-                    |b, &_s| {
-                        b.iter(|| {
-                            benchmark_rfind_replace(
-                                black_box(&mut preprocessor),
-                                black_box(&mut file_writer),
-                                black_box(&find_replace_n_triplets),
-                            );
-                        });
-                    },
-                );
-                file_writer.overwrite(&data);
-            });
-            benchmark_group.finish();
-        });
-
         benchmark_with_group!(criterion, "find_replace_all", size, |benchmark_group| {
             for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
                 benchmark_group.bench_with_input(
