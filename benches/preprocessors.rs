@@ -1,24 +1,22 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use file_rw::{
     preprocess::{
-        preprocessor::{Preprocessor, Search},
+        preprocessor::Search,
         CharIndexMatrix, ContinuousHashmap, WindowsHashmap,
     },
-    FileReader, FileWriter,
+    FileWriter,
 };
 use rand::Rng;
 use tempfile::tempdir;
 
 macro_rules! stress_test_preprocessor_fn {
-    ($preprocessor_type:ident, $file_writer:ident, $data_len:ident, |$byte:ident, $replace_byte:ident, $preprocessor_cache:ident, $digit:ident| $block:block) => {
-        for $digit in 0..$data_len {
-            let mut $preprocessor_cache = $file_writer.preprocess_with::<$preprocessor_type>();
-            for int_byte in 0u8..0xFFu8 {
-                let int_replace_byte = 0xFF - int_byte;
-                let $replace_byte = int_replace_byte.to_be_bytes();
-                let $byte = int_byte.to_be_bytes();
-                $block
-            }
+    ($preprocessor_type:ident, $file_writer:ident, |$byte:ident, $replace_byte:ident, $preprocessor_cache:ident| $block:block) => {
+        let mut $preprocessor_cache = $file_writer.preprocess_with::<$preprocessor_type>();
+        for int_byte in 0u8..0xFFu8 {
+            let int_replace_byte = 0xFF - int_byte;
+            let $replace_byte = int_replace_byte.to_be_bytes();
+            let $byte = int_byte.to_be_bytes();
+            $block
         }
     };
 }
@@ -52,7 +50,7 @@ macro_rules! benchmark_with_group {
     };
 }
 
-fn gen__dataset(bytes: usize) -> Vec<u8> {
+fn gen_dataset(bytes: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
     let mut data = Vec::with_capacity(bytes);
     for _ in 0..1024 * 1024 * 10 {
@@ -62,100 +60,75 @@ fn gen__dataset(bytes: usize) -> Vec<u8> {
 }
 
 fn benchmark_find_replace_nth<T: Search>(
-    preprocessor: &mut T,
+    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
+    _preprocessor: &mut T,
     file_writer: &mut FileWriter,
-    data_len: usize,
 ) {
-    stress_test_preprocessor_fn!(
-        T,
-        file_writer,
-        data_len,
-        |byte, replace_byte, preprocessor_cache, digit| {
-            file_writer.find_replace_nth(
-                black_box(byte),
-                black_box(replace_byte),
-                black_box(digit),
-                &mut preprocessor_cache,
-            );
-        }
-    );
+    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+        file_writer.find_replace_nth(
+            black_box(byte),
+            black_box(replace_byte),
+            black_box(2),
+            &mut preprocessor_cache,
+        );
+    });
 }
 
 fn benchmark_find_replace<T: Search>(
-    preprocessor: &mut T,
+    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
+    _preprocessor: &mut T,
     file_writer: &mut FileWriter,
-    data_len: usize,
 ) {
-    stress_test_preprocessor_fn!(
-        T,
-        file_writer,
-        data_len,
-        |byte, replace_byte, preprocessor_cache, digit| {
-            file_writer.find_replace(
-                black_box(byte),
-                black_box(replace_byte),
-                &mut preprocessor_cache,
-            );
-        }
-    );
+    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+        file_writer.find_replace(
+            black_box(byte),
+            black_box(replace_byte),
+            &mut preprocessor_cache,
+        );
+    });
 }
 
 fn benchmark_rfind_replace_nth<T: Search>(
-    preprocessor: &mut T,
+    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
+    _preprocessor: &mut T,
     file_writer: &mut FileWriter,
-    data_len: usize,
 ) {
-    stress_test_preprocessor_fn!(
-        T,
-        file_writer,
-        data_len,
-        |byte, replace_byte, preprocessor_cache, digit| {
-            file_writer.rfind_replace_nth(
-                black_box(byte),
-                black_box(replace_byte),
-                black_box(digit),
-                &mut preprocessor_cache,
-            );
-        }
-    );
+    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+        file_writer.rfind_replace_nth(
+            black_box(byte),
+            black_box(replace_byte),
+            black_box(2),
+            &mut preprocessor_cache,
+        );
+    });
 }
 
 fn benchmark_rfind_replace<T: Search>(
-    preprocessor: &mut T,
+    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
+    _preprocessor: &mut T,
     file_writer: &mut FileWriter,
-    data_len: usize,
 ) {
-    stress_test_preprocessor_fn!(
-        T,
-        file_writer,
-        data_len,
-        |byte, replace_byte, preprocessor_cache, digit| {
-            file_writer.rfind_replace(
-                black_box(byte),
-                black_box(replace_byte),
-                &mut preprocessor_cache,
-            );
-        }
-    );
+    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+        file_writer.rfind_replace(
+            black_box(byte),
+            black_box(replace_byte),
+            &mut preprocessor_cache,
+        );
+    });
 }
 
 fn benchmark_find_replace_all<T: Search>(
-    preprocessor: &mut T,
+    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
+    _preprocessor: &mut T,
     file_writer: &mut FileWriter,
-    data_len: usize,
 ) {
-    stress_test_preprocessor_fn!(
-        T,
-        file_writer,
-        data_len,
-        |byte, replace_byte, preprocessor_cache, digit| {
-            file_writer.find_replace_all(
-                black_box(byte),
-                black_box(replace_byte),
-                &mut preprocessor_cache,
-            );
-        }
-    );
+    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+        file_writer.find_replace_all(
+            black_box(byte),
+            black_box(replace_byte),
+            &mut preprocessor_cache,
+        );
+    });
 }
 
 fn benchmark_preprocessors(criterion: &mut Criterion) {
@@ -167,19 +140,18 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
 
     const KB: usize = 1024;
     for size in [KB, 2 * KB, 4 * KB, 8 * KB, 16 * KB].iter() {
-        let data = gen__dataset(*size);
+        let data = gen_dataset(*size);
         file_writer.overwrite(&data);
         benchmark_with_group!(criterion, "find_replace_nth", size, |benchmark_group| {
             for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
                 benchmark_group.bench_with_input(
                     BenchmarkId::new(preprocessor_type_str, size),
                     &size,
-                    |b, &s| {
+                    |b, &_s| {
                         b.iter(|| {
                             benchmark_find_replace_nth(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
-                                black_box(*s),
                             );
                         });
                         file_writer.overwrite(&data);
@@ -193,12 +165,11 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                 benchmark_group.bench_with_input(
                     BenchmarkId::new(preprocessor_type_str, size),
                     &size,
-                    |b, &s| {
+                    |b, &_s| {
                         b.iter(|| {
                             benchmark_find_replace(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
-                                black_box(*s),
                             );
                         });
                         file_writer.overwrite(&data);
@@ -212,12 +183,11 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                 benchmark_group.bench_with_input(
                     BenchmarkId::new(preprocessor_type_str, size),
                     &size,
-                    |b, &s| {
+                    |b, &_s| {
                         b.iter(|| {
                             benchmark_rfind_replace_nth(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
-                                black_box(*s),
                             );
                         });
                         file_writer.overwrite(&data);
@@ -231,12 +201,11 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                 benchmark_group.bench_with_input(
                     BenchmarkId::new(preprocessor_type_str, size),
                     &size,
-                    |b, &s| {
+                    |b, &_s| {
                         b.iter(|| {
                             benchmark_rfind_replace(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
-                                black_box(*s),
                             );
                         });
                         file_writer.overwrite(&data);
@@ -251,12 +220,11 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                 benchmark_group.bench_with_input(
                     BenchmarkId::new(preprocessor_type_str, size),
                     &size,
-                    |b, &s| {
+                    |b, &_s| {
                         b.iter(|| {
                             benchmark_find_replace_all(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
-                                black_box(*s),
                             );
                         });
                         file_writer.overwrite(&data);
