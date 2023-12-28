@@ -16,7 +16,6 @@ macro_rules! stress_test_preprocessor_fn {
             let $replace_byte = replace_vec.as_slice();
             let $find_byte = find_vec.as_slice();
             let $n = *n;
-            println!("{:?}, {:?}, {:?}", $find_byte, $replace_byte, $n);
             $block
         });
     };
