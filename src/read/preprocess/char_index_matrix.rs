@@ -17,7 +17,7 @@ use rayon::{
 /// where n is the number of bytes in the file.
 /// Search Time complexity is O(m), where m is the number of bytes in the pattern.
 pub struct CharIndexMatrix {
-    matrix: Box<[Vec<usize>; 0xFF]>,
+    matrix: Box<[Vec<usize>; 0xFF+1]>,
 }
 
 impl CharIndexMatrix {
@@ -45,14 +45,14 @@ impl Preprocessor for CharIndexMatrix {
             .par_iter()
             .enumerate()
             .fold(
-                || Box::new([NEW_VEC; 0xFF]),
-                |mut lookup_map: Box<[Vec<usize>; 0xFF]>, (i, byte)| {
+                || Box::new([NEW_VEC; 0xFF+1]),
+                |mut lookup_map: Box<[Vec<usize>; 0xFF+1]>, (i, byte)| {
                     lookup_map[*byte as usize].push(i);
                     lookup_map
                 },
             )
             .reduce(
-                || Box::new([NEW_VEC; 0xFF]),
+                || Box::new([NEW_VEC; 0xFF+1]),
                 |mut lookup_map1, lookup_map2| {
                     lookup_map1
                         .par_iter_mut()
