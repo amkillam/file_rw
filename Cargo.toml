@@ -23,6 +23,9 @@ rand = "0.8.5"
 tempfile = "3.8.1"
 test_utils = { path = "test_utils"}
 
+[lib]
+bench = false #disable libtest benchmarking, use Criterion instead
+
 [[bench]]
 name = "preprocessors"
 harness = false
