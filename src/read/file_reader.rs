@@ -155,6 +155,16 @@ impl FileReader {
         preprocessor.rfind_bytes(self.bytes(), pattern)
     }
 
+    /// Finds the nth occurrence of a byte sequence in the file data, in reverse order.
+    pub fn rfind_bytes_nth(
+        &self,
+        pattern: impl AsRef<[u8]>,
+        n: usize,
+        preprocessor: &mut (impl Preprocessor + Search),
+    ) -> Option<usize> {
+        preprocessor.rfind_bytes_nth(self.bytes(), pattern, n)
+    }
+
     /// Finds all occurrences of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and returns a vector of indices where the byte sequence is found.
     pub fn find_bytes_all(

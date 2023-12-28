@@ -156,6 +156,49 @@ impl FileWriter {
         self
     }
 
+    /// Finds the last occurrence of a slice of bytes in the file and replaces it with another slice of bytes.
+    pub fn rfind_replace(
+        &mut self,
+        find: impl AsRef<[u8]>,
+        replace: impl AsRef<[u8]>,
+        preprocessor: &mut (impl Preprocessor + Search),
+    ) -> &Self {
+        let find = find.as_ref();
+        let replace = replace.as_ref();
+        let offset = preprocessor.rfind_bytes(self.bytes(), find);
+
+        match offset {
+            Some(offset) => {
+                self.find_replace_inner(find, replace, offset);
+            }
+            None => (),
+        }
+
+        self
+    }
+
+    /// Finds the nth occurrence of a slice of bytes in the file, in reverse order, and replaces it with another slice of bytes.
+    pub fn rfind_replace_nth(
+        &mut self,
+        find: impl AsRef<[u8]>,
+        replace: impl AsRef<[u8]>,
+        n: usize,
+        preprocessor: &mut (impl Preprocessor + Search),
+    ) -> &Self {
+        let find = find.as_ref();
+        let replace = replace.as_ref();
+        let offset = preprocessor.rfind_bytes_nth(self.bytes(), find, n);
+
+        match offset {
+            Some(offset) => {
+                self.find_replace_inner(find, replace, offset);
+            }
+            None => (),
+        }
+
+        self
+    }
+
     /// Finds the nth occurrence of a slice of bytes in the file and replaces it with another slice of bytes.
     /// If the slice to find is not found, no replacement occurs.
     pub fn find_replace_nth(
