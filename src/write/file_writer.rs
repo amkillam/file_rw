@@ -229,9 +229,14 @@ impl FileWriter {
     ) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let find_results = preprocessor.find_bytes_all(self.bytes(), find).unwrap();
-        for offset in &find_results {
-            self.find_replace_inner(find, replace, offset.to_owned());
+        let find_results = preprocessor.find_bytes_all(self.bytes(), find);
+        match find_results {
+            Some(find_results) => {
+                for offset in &find_results {
+                    self.find_replace_inner(find, replace, offset.to_owned());
+                }
+            }
+            None => (),
         }
         self
     }
