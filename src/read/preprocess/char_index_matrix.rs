@@ -100,6 +100,15 @@ impl Search for CharIndexMatrix {
     ) -> Option<Vec<usize>> {
         let bytes = bytes.as_ref();
         let pattern = pattern.as_ref();
+
+        if pattern.len() > bytes.len() {
+            return None;
+        }
+
+        if pattern.len() == 0 {
+            return Some((0..bytes.len()).collect());
+        }
+
         self.matrix[pattern[0] as usize]
             .par_iter()
             .filter_map(|i| Self::find_inner_compare(bytes, i, pattern))
