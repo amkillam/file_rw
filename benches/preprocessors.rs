@@ -67,68 +67,6 @@ fn gen_find_replace_n_triplets(num_bytes:usize) -> Vec<(Vec<u8>, Vec<u8>, usize)
     triplets_container
 }
 
-fn benchmark_find_replace_nth<T: Search>(
-    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
-    _preprocessor: &mut T,
-    file_writer: &mut FileWriter,
-    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
-) {
-    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, n, preprocessor_cache| {
-        file_writer.find_replace_nth(
-            black_box(find_byte),
-            black_box(replace_byte),
-            black_box(n),
-            &mut preprocessor_cache,
-        );
-    });
-}
-
-fn benchmark_find_replace<T: Search>(
-    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
-    _preprocessor: &mut T,
-    file_writer: &mut FileWriter,
-    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
-) {
-    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, _n, preprocessor_cache| {
-        file_writer.find_replace(
-            black_box(find_byte),
-            black_box(replace_byte),
-            &mut preprocessor_cache,
-        );
-    });
-}
-
-fn benchmark_rfind_replace_nth<T: Search>(
-    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
-    _preprocessor: &mut T,
-    file_writer: &mut FileWriter,
-    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
-) {
-    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, n, preprocessor_cache| {
-        file_writer.rfind_replace_nth(
-            black_box(find_byte),
-            black_box(replace_byte),
-            black_box(n),
-            &mut preprocessor_cache,
-        );
-    });
-}
-
-fn benchmark_rfind_replace<T: Search>(
-    //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
-    _preprocessor: &mut T,
-    file_writer: &mut FileWriter,
-    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
-) {
-    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, _n, preprocessor_cache| {
-        file_writer.rfind_replace(
-            black_box(find_byte),
-            black_box(replace_byte),
-            &mut preprocessor_cache,
-        );
-    });
-}
-
 fn benchmark_find_replace_all<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
