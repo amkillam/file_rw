@@ -23,21 +23,21 @@ macro_rules! stress_test_preprocessor_fn {
 
 macro_rules! for_each_preprocessor{
     ($file_writer:ident, |$preprocessor:ident, $preprocessor_type_str:ident| $benchmark_block:block) => {
+        
         let mut $preprocessor = $file_writer.preprocess_with::<CharIndexMatrix>();
         let $preprocessor_type_str = "CharIndexMatrix";
-
         $benchmark_block
+
         let mut $preprocessor = $file_writer.preprocess_with::<ContinuousHashmap>();
         let $preprocessor_type_str = "ContinuousHashmap";
-
        $benchmark_block
+
         let mut $preprocessor = $file_writer.preprocess_with::<WindowsHashmap>();
         let $preprocessor_type_str = "WindowsHashmap";
-
        $benchmark_block
+
         let mut $preprocessor = $file_writer.preprocess();
         let $preprocessor_type_str = "ContinuousHashmap";
-
        $benchmark_block
     };
 }
@@ -53,7 +53,7 @@ macro_rules! benchmark_with_group {
 fn gen_dataset(bytes: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
     let mut data = Vec::with_capacity(bytes);
-    for _ in 0..1024 * 1024 * 10 {
+    for _ in 0..bytes {
         data.push(rng.gen::<u8>());
     }
     data
@@ -139,7 +139,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
     let mut file_writer = FileWriter::open(&test_file_path);
 
     const KB: usize = 1024;
-    for size in [KB, 2 * KB, 4 * KB, 8 * KB, 16 * KB].iter() {
+    const MB : usize = 1024 * KB;
+    const GB : usize = 1024 * MB;
+    for size in [KB, MB, GB].iter() {
         let data = gen_dataset(*size);
         file_writer.overwrite(&data);
         benchmark_with_group!(criterion, "find_replace_nth", size, |benchmark_group| {
@@ -154,9 +156,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                                 black_box(&mut file_writer),
                             );
                         });
-                        file_writer.overwrite(&data);
                     },
                 );
+                file_writer.overwrite(&data);
             });
             benchmark_group.finish();
         });
@@ -172,9 +174,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                                 black_box(&mut file_writer),
                             );
                         });
-                        file_writer.overwrite(&data);
                     },
                 );
+                file_writer.overwrite(&data);
             });
             benchmark_group.finish();
         });
@@ -190,9 +192,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                                 black_box(&mut file_writer),
                             );
                         });
-                        file_writer.overwrite(&data);
                     },
                 );
+                file_writer.overwrite(&data);
             });
             benchmark_group.finish();
         });
@@ -208,9 +210,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                                 black_box(&mut file_writer),
                             );
                         });
-                        file_writer.overwrite(&data);
                     },
                 );
+                file_writer.overwrite(&data);
             });
             benchmark_group.finish();
         });
@@ -227,9 +229,9 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                                 black_box(&mut file_writer),
                             );
                         });
-                        file_writer.overwrite(&data);
                     },
                 );
+                file_writer.overwrite(&data);
             });
             benchmark_group.finish();
         });
