@@ -10,14 +10,15 @@ use rand::Rng;
 use tempfile::tempdir;
 
 macro_rules! stress_test_preprocessor_fn {
-    ($preprocessor_type:ident, $file_writer:ident, |$byte:ident, $replace_byte:ident, $preprocessor_cache:ident| $block:block) => {
+    ($preprocessor_type:ident, $file_writer:ident, $find_replace_n_triplets:ident, |$find_byte:ident, $replace_byte:ident, $n:ident, $preprocessor_cache:ident| $block:block) => {
         let mut $preprocessor_cache = $file_writer.preprocess_with::<$preprocessor_type>();
-        for int_byte in 0u8..0xFFu8 {
-            let int_replace_byte = 0xFF - int_byte;
-            let $replace_byte = int_replace_byte.to_be_bytes();
-            let $byte = int_byte.to_be_bytes();
+        $find_replace_n_triplets.iter().for_each(|(find_vec, replace_vec, n)| {
+            let $replace_byte = replace_vec.as_slice();
+            let $find_byte = find_vec.as_slice();
+            let $n = *n;
+            println!("{:?}, {:?}, {:?}", $find_byte, $replace_byte, $n);
             $block
-        }
+        });
     };
 }
 
@@ -50,25 +51,38 @@ macro_rules! benchmark_with_group {
     };
 }
 
-fn gen_dataset(bytes: usize) -> Vec<u8> {
+fn gen_dataset(num_bytes: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    let mut data = Vec::with_capacity(bytes);
-    for _ in 0..bytes {
+    let mut data = Vec::with_capacity(num_bytes);
+    for _ in 0..num_bytes {
         data.push(rng.gen::<u8>());
     }
     data
+}
+
+fn gen_find_replace_n_triplets(num_bytes:usize) -> Vec<(Vec<u8>, Vec<u8>, usize)> {
+    let mut rng = rand::thread_rng();
+    let triplets_container = (1..num_bytes).into_iter().map(|_| {
+        let find_replace_range = rng.gen_range(1u8..10u8);
+        let find_vec = (1u8..find_replace_range).into_iter().map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
+        let replace_vec = (1u8..find_replace_range).into_iter().map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
+    let n = rng.gen_range(1..10);
+    (find_vec, replace_vec, n)
+    }).collect::<Vec<(Vec<u8>, Vec<u8>, usize)>>();
+    triplets_container
 }
 
 fn benchmark_find_replace_nth<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
     file_writer: &mut FileWriter,
+    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
 ) {
-    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, n, preprocessor_cache| {
         file_writer.find_replace_nth(
-            black_box(byte),
+            black_box(find_byte),
             black_box(replace_byte),
-            black_box(2),
+            black_box(n),
             &mut preprocessor_cache,
         );
     });
@@ -78,10 +92,11 @@ fn benchmark_find_replace<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
     file_writer: &mut FileWriter,
+    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
 ) {
-    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, _n, preprocessor_cache| {
         file_writer.find_replace(
-            black_box(byte),
+            black_box(find_byte),
             black_box(replace_byte),
             &mut preprocessor_cache,
         );
@@ -92,12 +107,13 @@ fn benchmark_rfind_replace_nth<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
     file_writer: &mut FileWriter,
+    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
 ) {
-    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, n, preprocessor_cache| {
         file_writer.rfind_replace_nth(
-            black_box(byte),
+            black_box(find_byte),
             black_box(replace_byte),
-            black_box(2),
+            black_box(n),
             &mut preprocessor_cache,
         );
     });
@@ -107,10 +123,11 @@ fn benchmark_rfind_replace<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
     file_writer: &mut FileWriter,
+    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
 ) {
-    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, _n, preprocessor_cache| {
         file_writer.rfind_replace(
-            black_box(byte),
+            black_box(find_byte),
             black_box(replace_byte),
             &mut preprocessor_cache,
         );
@@ -121,10 +138,11 @@ fn benchmark_find_replace_all<T: Search>(
     //Allows identification of type passed in macro - type cannot be passed literally in macro as generic
     _preprocessor: &mut T,
     file_writer: &mut FileWriter,
+    find_replace_n_triplets: &Vec<(Vec<u8>, Vec<u8>, usize)>,
 ) {
-    stress_test_preprocessor_fn!(T, file_writer, |byte, replace_byte, preprocessor_cache| {
+    stress_test_preprocessor_fn!(T, file_writer, find_replace_n_triplets,|find_byte, replace_byte, _n, preprocessor_cache| {
         file_writer.find_replace_all(
-            black_box(byte),
+            black_box(find_byte),
             black_box(replace_byte),
             &mut preprocessor_cache,
         );
@@ -144,6 +162,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
     for size in [KB, MB, GB].iter() {
         let data = gen_dataset(*size);
         file_writer.overwrite(&data);
+        let find_replace_n_triplets = gen_find_replace_n_triplets(*size);
         benchmark_with_group!(criterion, "find_replace_nth", size, |benchmark_group| {
             for_each_preprocessor!(file_writer, |preprocessor, preprocessor_type_str| {
                 benchmark_group.bench_with_input(
@@ -154,6 +173,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                             benchmark_find_replace_nth(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
+                                black_box(&find_replace_n_triplets),
                             );
                         });
                     },
@@ -172,6 +192,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                             benchmark_find_replace(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
+                                black_box(&find_replace_n_triplets),
                             );
                         });
                     },
@@ -190,6 +211,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                             benchmark_rfind_replace_nth(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
+                                black_box(&find_replace_n_triplets),
                             );
                         });
                     },
@@ -208,6 +230,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                             benchmark_rfind_replace(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
+                                black_box(&find_replace_n_triplets),
                             );
                         });
                     },
@@ -227,6 +250,7 @@ fn benchmark_preprocessors(criterion: &mut Criterion) {
                             benchmark_find_replace_all(
                                 black_box(&mut preprocessor),
                                 black_box(&mut file_writer),
+                                black_box(&find_replace_n_triplets),
                             );
                         });
                     },
