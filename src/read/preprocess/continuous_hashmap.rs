@@ -21,7 +21,7 @@ pub struct ContinuousHashmap {
 
 impl ContinuousHashmap {
     fn process(&mut self, bytes: &[u8], pattern_len: usize) {
-        self.hashmap.extend(hash_windows(bytes, pattern_len));
+        self.hashmap.extend(*hash_windows(bytes, pattern_len));
         self.lengths_searched[pattern_len - 1] = true;
     }
 

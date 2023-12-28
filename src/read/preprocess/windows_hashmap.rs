@@ -8,12 +8,13 @@ use rayon::{
 /// A preprocessor that uses a hashmap of all possible subsequences of
 /// given data to search byte sequences.
 /// O(n^2) preprocessing time, O(n^2) space complexity. O(1) search time
-pub fn hash_windows(bytes: &[u8], pattern_len: usize) -> AHashMap<Box<[u8]>, Vec<usize>> {
+pub fn hash_windows(bytes: &[u8], pattern_len: usize) -> Box<AHashMap<Box<[u8]>, Vec<usize>>> {
+    let bytes_len = bytes.len();
     bytes
         .par_windows(pattern_len)
         .enumerate()
         .fold(
-            || AHashMap::new(),
+            || Box::new(AHashMap::with_capacity(bytes_len)),
             |mut lookup_map, (j, window)| {
                 lookup_map
                     .entry(Box::from(window))
@@ -23,9 +24,9 @@ pub fn hash_windows(bytes: &[u8], pattern_len: usize) -> AHashMap<Box<[u8]>, Vec
             },
         )
         .reduce(
-            || AHashMap::new(),
+            || Box::new(AHashMap::with_capacity(bytes_len)),
             |mut lookup_map1, lookup_map2| {
-                for (key, value) in lookup_map2 {
+                for (key, value) in *lookup_map2 {
                     lookup_map1
                         .entry(key)
                         .or_insert_with(Vec::new)
@@ -48,13 +49,14 @@ impl Preprocessor for WindowsHashmap {
     fn new(bytes: impl AsRef<[u8]>) -> Self {
         let bytes = bytes.as_ref();
         let bytes_len = bytes.len();
-        let lookup_map: Box<AHashMap<Box<[u8]>, Vec<usize>>> = Box::new((1..bytes_len)
+        let lookup_map: Box<AHashMap<Box<[u8]>, Vec<usize>>> = (1..bytes_len)
             .into_par_iter()
-            .map(|i| hash_windows(bytes, i))
-            .reduce(
-                || AHashMap::new(),
+            .map(|pattern_len| {
+                hash_windows(bytes, pattern_len)
+            }).reduce(
+                || Box::new(AHashMap::with_capacity(bytes_len)),
                 |mut lookup_map1, lookup_map2| {
-                    for (key, value) in lookup_map2 {
+                    for (key, value) in *lookup_map2 {
                         lookup_map1
                             .entry(key)
                             .or_insert_with(Vec::new)
@@ -62,7 +64,7 @@ impl Preprocessor for WindowsHashmap {
                     }
                     lookup_map1
                 },
-            ));
+            );
         Self {
             hashmap: lookup_map,
         }
