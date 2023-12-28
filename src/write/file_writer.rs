@@ -1,11 +1,4 @@
-use crate::{
-    file::open_as_write,
-    read::preprocess::{
-        preprocessor::{Preprocessor, Search},
-        ContinuousHashmap,
-    },
-    FileReader,
-};
+use crate::{file::open_as_write, FileReader};
 use filepath::FilePath;
 use memmap2::MmapMut;
 use std::{fmt, fs::File, path::Path};
@@ -99,22 +92,6 @@ impl FileWriter {
         &self.mmap[..]
     }
 
-    ///Preprocess data with a given preprocessor for searching subsequences.
-    ///Preprocessors are any type which implements the Preprocessor trait
-    pub fn preprocess_with<T: Preprocessor>(&self) -> T {
-        T::new(self.bytes())
-    }
-
-    ///Preprocess data with the default processor,
-    /// which is the ContinuousHashmap. ContinuousHashmap performs
-    /// no initial preprocessing, but instead hashes and maps indices of all
-    /// windows of len m,
-    /// where m is the length of the pattern being searched for.
-    /// Essentially, this is a sensible default for most cases.
-    pub fn preprocess(&self) -> ContinuousHashmap {
-        ContinuousHashmap::new(self.bytes())
-    }
-
     /// Replaces a portion of the file content starting from the provided offset with the provided bytes.
     pub fn replace(&mut self, bytes: impl AsRef<[u8]>, offset: usize) -> &Self {
         let bytes = bytes.as_ref();
@@ -136,15 +113,11 @@ impl FileWriter {
 
     /// Finds a sequence of bytes in the file and replaces it with another sequence of bytes.
     /// If the sequence to find is not found, it does nothing.
-    pub fn find_replace(
-        &mut self,
-        find: impl AsRef<[u8]>,
-        replace: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> &Self {
+    pub fn find_replace(&mut self, find: impl AsRef<[u8]>, replace: impl AsRef<[u8]>) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let offset = preprocessor.find_bytes(self.bytes(), find);
+        let file_reader = self.to_reader();
+        let offset = file_reader.find_bytes(find);
 
         match offset {
             Some(offset) => {
@@ -157,15 +130,11 @@ impl FileWriter {
     }
 
     /// Finds the last occurrence of a slice of bytes in the file and replaces it with another slice of bytes.
-    pub fn rfind_replace(
-        &mut self,
-        find: impl AsRef<[u8]>,
-        replace: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> &Self {
+    pub fn rfind_replace(&mut self, find: impl AsRef<[u8]>, replace: impl AsRef<[u8]>) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let offset = preprocessor.rfind_bytes(self.bytes(), find);
+        let file_reader = self.to_reader();
+        let offset = file_reader.rfind_bytes(find);
 
         match offset {
             Some(offset) => {
@@ -183,11 +152,11 @@ impl FileWriter {
         find: impl AsRef<[u8]>,
         replace: impl AsRef<[u8]>,
         n: usize,
-        preprocessor: &mut (impl Preprocessor + Search),
     ) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let offset = preprocessor.rfind_bytes_nth(self.bytes(), find, n);
+        let file_reader = self.to_reader();
+        let offset = file_reader.rfind_bytes_nth(find, n);
 
         match offset {
             Some(offset) => {
@@ -206,11 +175,11 @@ impl FileWriter {
         find: impl AsRef<[u8]>,
         replace: impl AsRef<[u8]>,
         n: usize,
-        preprocessor: &mut (impl Preprocessor + Search),
     ) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let offset = preprocessor.find_bytes_nth(self.bytes(), find, n);
+        let file_reader = self.to_reader();
+        let offset = file_reader.find_bytes_nth(find, n);
         match offset {
             Some(offset) => {
                 self.find_replace_inner(find, replace, offset);
@@ -221,22 +190,13 @@ impl FileWriter {
     }
 
     /// Finds all occurrences of a slice of bytes in the file and replaces them with another slice of bytes.
-    pub fn find_replace_all(
-        &mut self,
-        find: impl AsRef<[u8]>,
-        replace: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> &Self {
+    pub fn find_replace_all(&mut self, find: impl AsRef<[u8]>, replace: impl AsRef<[u8]>) -> &Self {
         let find = find.as_ref();
         let replace = replace.as_ref();
-        let find_results = preprocessor.find_bytes_all(self.bytes(), find);
-        match find_results {
-            Some(find_results) => {
-                for offset in &find_results {
-                    self.find_replace_inner(find, replace, offset.to_owned());
-                }
-            }
-            None => (),
+        let file_reader = self.to_reader();
+        let find_results = file_reader.find_bytes_all(find);
+        for offset in &find_results {
+            self.find_replace_inner(find, replace, offset.to_owned());
         }
         self
     }

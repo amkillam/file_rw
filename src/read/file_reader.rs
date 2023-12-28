@@ -1,15 +1,8 @@
-use crate::{
-    file::open_as_read,
-    read::preprocess::{
-        preprocessor::{Preprocessor, Search},
-        ContinuousHashmap,
-    },
-    FileWriter,
-};
+use crate::{file::open_as_read, FileWriter};
 use digest::{Digest, Output};
 use filepath::FilePath;
+use memchr::memmem::{find, find_iter, rfind, rfind_iter};
 use memmap2::Mmap;
-use rayon::prelude::*;
 use sha3::Sha3_256;
 use std::{fmt, fs::File, path::Path};
 
@@ -79,22 +72,6 @@ impl FileReader {
         self.mmap.to_vec()
     }
 
-    ///Preprocess data with a given preprocessor for searching subsequences.
-    ///Preprocessors are any type which implements the Preprocessor trait
-    pub fn preprocess_with<T: Preprocessor>(&self) -> T {
-        T::new(self.bytes())
-    }
-
-    ///Preprocess data with the default processor,
-    /// which is the ContinuousHashmap. ContinuousHashmap performs
-    /// no initial preprocessing, but instead hashes and maps indices of all
-    /// windows of len m,
-    /// where m is the length of the pattern being searched for.
-    /// Essentially, this is a sensible default for most cases.
-    pub fn preprocess(&self) -> ContinuousHashmap {
-        ContinuousHashmap::new(self.bytes())
-    }
-
     /// Opens the file for reading and returns the File object.
     pub fn file(&self) -> File {
         open_as_read(self.path.as_ref().as_ref())
@@ -127,8 +104,8 @@ impl FileReader {
 
     /// Computes the hash of the file data and returns it as a hex string.
     pub fn hash_to_string(&self) -> String {
-        let mut hash = self.hash();
-        hash.par_iter_mut()
+        let hash = self.hash();
+        hash.iter()
             .map(|byte| format!("{:02x}", byte))
             .collect::<String>()
     }
@@ -136,66 +113,40 @@ impl FileReader {
     /// Finds the first occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and returns the index of the first occurrence.
     /// If the byte sequence is not found, it returns None.
-    pub fn find_bytes(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<usize> {
-        preprocessor.find_bytes(self.bytes(), pattern)
+    pub fn find_bytes(&self, pattern: impl AsRef<[u8]>) -> Option<usize> {
+        find(self.bytes(), pattern.as_ref())
     }
 
     /// Finds the last occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and returns the index of the last occurrence.
     /// If the byte sequence is not found, it returns None.
-    pub fn rfind_bytes(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<usize> {
-        preprocessor.rfind_bytes(self.bytes(), pattern)
+    pub fn rfind_bytes(&self, pattern: impl AsRef<[u8]>) -> Option<usize> {
+        rfind(self.bytes(), pattern.as_ref())
     }
 
     /// Finds the nth occurrence of a byte sequence in the file data, in reverse order.
-    pub fn rfind_bytes_nth(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        n: usize,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<usize> {
-        preprocessor.rfind_bytes_nth(self.bytes(), pattern, n)
+    pub fn rfind_bytes_nth(&self, pattern: impl AsRef<[u8]>, n: usize) -> Option<usize> {
+        rfind_iter(self.bytes(), pattern.as_ref()).nth(n)
     }
 
     /// Finds all occurrences of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and returns a vector of indices where the byte sequence is found.
-    pub fn find_bytes_all(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<Vec<usize>> {
-        preprocessor.find_bytes_all(self.bytes(), pattern)
+    pub fn find_bytes_all(&self, pattern: impl AsRef<[u8]>) -> Vec<usize> {
+        find_iter(self.bytes(), pattern.as_ref()).collect::<Vec<usize>>()
     }
 
     /// Finds all occurrences of a byte sequence in the file data, in reverse order.
     /// It takes a byte sequence `pattern` and returns a vector of indices where the byte sequence is found.
     /// The indices are sorted in reverse order.
-    pub fn rfind_bytes_all(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<Vec<usize>> {
-        preprocessor.rfind_bytes_all(self.bytes(), pattern)
+    pub fn rfind_bytes_all(&self, pattern: impl AsRef<[u8]>) -> Vec<usize> {
+        rfind_iter(self.bytes(), pattern.as_ref()).collect::<Vec<usize>>()
     }
 
     /// Finds the nth occurrence of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and an index `n`, and returns the index of the nth occurrence.
     /// If the byte sequence is not found, it returns None.
-    pub fn find_bytes_nth(
-        &self,
-        pattern: impl AsRef<[u8]>,
-        n: usize,
-        preprocessor: &mut (impl Preprocessor + Search),
-    ) -> Option<usize> {
-        preprocessor.find_bytes_nth(self.bytes(), pattern, n)
+    pub fn find_bytes_nth(&self, pattern: impl AsRef<[u8]>, n: usize) -> Option<usize> {
+        find_iter(self.bytes(), pattern.as_ref()).nth(n)
     }
 
     /// Compares two files by their hashes.
@@ -237,16 +188,6 @@ impl IntoIterator for FileReader {
     /// Converts the FileReader into an iterator over the bytes of the file data.
     fn into_iter(self) -> Self::IntoIter {
         self.bytes().to_vec().into_iter()
-    }
-}
-
-impl IntoParallelIterator for FileReader {
-    type Item = u8;
-    type Iter = rayon::vec::IntoIter<Self::Item>;
-
-    /// Converts the FileReader into a parallel iterator over the bytes of the file data.
-    fn into_par_iter(self) -> Self::Iter {
-        self.bytes().to_vec().into_par_iter()
     }
 }
 

@@ -1,10 +1,6 @@
-use file_rw::{
-    preprocess::{CharIndexMatrix, ContinuousHashmap, WindowsHashmap},
-    FileReader, FileWriter,
-};
+use file_rw::{FileReader, FileWriter};
 use std::fs::OpenOptions;
 use tempfile::tempdir;
-use test_utils::for_each_preprocessor;
 
 macro_rules! file_writer_test {
     ($file_name:expr, $init_text:expr, |$tempdir:ident, $tempdir_path:ident, $test_file_path:ident, $file_writer:ident, $file_reader:ident| $block:block) => {{
@@ -135,11 +131,20 @@ fn test_find_replace() {
         "test_find_replace",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            for_each_preprocessor!(file_writer, |preprocessor| {
-                file_writer.find_replace("Hello", "world", &mut preprocessor);
-                assert_eq!(file_reader.read_to_string(), "world, world!");
-                file_writer.overwrite("Hello, world!");
-            });
+            file_writer.find_replace("Hello", "world");
+            assert_eq!(file_reader.read_to_string(), "world, world!");
+        }
+    );
+}
+
+#[test]
+fn test_rfind_replace() {
+    file_writer_test!(
+        "test_rfind_replace",
+        "Hello, world!",
+        |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
+            file_writer.rfind_replace("o", "a");
+            assert_eq!(file_reader.read_to_string(), "Hello, warld!");
         }
     );
 }
@@ -150,11 +155,20 @@ fn test_find_replace_nth() {
         "test_find_replace_nth",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            for_each_preprocessor!(file_writer, |preprocessor| {
-                file_writer.find_replace_nth("o", "a", 1, &mut preprocessor);
-                assert_eq!(file_reader.read_to_string(), "Hello, warld!");
-                file_writer.overwrite("Hello, world!");
-            });
+            file_writer.find_replace_nth("o", "a", 1);
+            assert_eq!(file_reader.read_to_string(), "Hello, warld!");
+        }
+    );
+}
+
+#[test]
+fn test_rfind_replace_nth() {
+    file_writer_test!(
+        "test_rfind_replace_nth",
+        "Hello, world!",
+        |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
+            file_writer.rfind_replace_nth("o", "a", 1);
+            assert_eq!(file_reader.read_to_string(), "Hella, world!");
         }
     );
 }
@@ -165,11 +179,8 @@ fn test_find_replace_all() {
         "test_find_replace_all",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            for_each_preprocessor!(file_writer, |preprocessor| {
-                file_writer.find_replace_all("o", "a", &mut preprocessor);
-                assert_eq!(file_reader.read_to_string(), "Hella, warld!");
-                file_writer.overwrite("Hello, world!");
-            });
+            file_writer.find_replace_all("o", "a");
+            assert_eq!(file_reader.read_to_string(), "Hella, warld!");
         }
     );
 }

@@ -1,12 +1,9 @@
-use file_rw::preprocess::{CharIndexMatrix, ContinuousHashmap, WindowsHashmap};
 use file_rw::FileReader;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sha3::{Digest, Sha3_256};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
 use tempfile::tempdir;
-use test_utils::for_each_preprocessor;
 
 macro_rules! file_reader_test {
     ($file_name:expr, |$tempdir:ident, $tempdir_path:ident, $test_file_path:ident, $file_writer:ident, $file_reader:ident| $block:block) => {{
@@ -178,12 +175,7 @@ fn test_find_bytes() {
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
             let bytes = b"test";
             let expected_offset = 8;
-            for_each_preprocessor!(file_reader, |preprocessor| {
-                assert_eq!(
-                    file_reader.find_bytes(bytes, &mut preprocessor),
-                    Some(expected_offset)
-                );
-            });
+            assert_eq!(file_reader.find_bytes(bytes), Some(expected_offset));
         }
     );
 }
@@ -195,12 +187,8 @@ fn test_rfind_bytes() {
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
             let bytes = b"test";
             let expected_offset = 23;
-            for_each_preprocessor!(file_reader, |preprocessor| {
-                assert_eq!(
-                    file_reader.rfind_bytes(bytes, &mut preprocessor),
-                    Some(expected_offset)
-                );
-            });
+
+            assert_eq!(file_reader.rfind_bytes(bytes), Some(expected_offset));
         }
     );
 }
@@ -212,12 +200,21 @@ fn test_find_bytes_all() {
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
             let bytes = b"test";
             let expected_offsets = vec![8, 13, 18, 23];
-            for_each_preprocessor!(file_reader, |preprocessor| {
-                assert_eq!(
-                    file_reader.find_bytes_all(bytes, &mut preprocessor),
-                    Some(expected_offsets.clone())
-                );
-            });
+
+            assert_eq!(file_reader.find_bytes_all(bytes), expected_offsets);
+        }
+    );
+}
+
+#[test]
+fn test_rfind_bytes_all() {
+    file_reader_test!(
+        "test_find_bytes",
+        |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
+            let bytes = b"test";
+            let expected_offsets = vec![23, 18, 13, 8];
+
+            assert_eq!(file_reader.rfind_bytes_all(bytes), expected_offsets);
         }
     );
 }
@@ -229,12 +226,21 @@ fn test_find_bytes_nth() {
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
             let bytes = b"test";
             let expected_offset = 13;
-            for_each_preprocessor!(file_reader, |preprocessor| {
-                assert_eq!(
-                    file_reader.find_bytes_nth(bytes, 1, &mut preprocessor),
-                    Some(expected_offset)
-                );
-            });
+
+            assert_eq!(file_reader.find_bytes_nth(bytes, 1), Some(expected_offset));
+        }
+    );
+}
+
+#[test]
+fn test_rfind_bytes_nth() {
+    file_reader_test!(
+        "test_find_bytes",
+        |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
+            let bytes = b"test";
+            let expected_offset = 18;
+
+            assert_eq!(file_reader.rfind_bytes_nth(bytes, 1), Some(expected_offset));
         }
     );
 }
@@ -321,26 +327,6 @@ fn test_into_iter() {
             assert_eq!(iter.next(), Some(b'e'));
             assert_eq!(iter.next(), Some(b'\n'));
             assert_eq!(iter.next(), None);
-        }
-    );
-}
-
-#[test]
-fn test_into_par_iter() {
-    file_reader_test!(
-        "test_file",
-        |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
-            let par_iter = file_reader.into_par_iter();
-            assert!(par_iter.clone().any(|c| c == b't'));
-            assert!(par_iter.clone().any(|c| c == b'e'));
-            assert!(par_iter.clone().any(|c| c == b's'));
-            assert!(par_iter.clone().any(|c| c == b't'));
-            assert!(par_iter.clone().any(|c| c == b' '));
-            assert!(par_iter.clone().any(|c| c == b'f'));
-            assert!(par_iter.clone().any(|c| c == b'i'));
-            assert!(par_iter.clone().any(|c| c == b'l'));
-            assert!(par_iter.clone().any(|c| c == b'e'));
-            assert!(par_iter.clone().any(|c| c == b'\n'));
         }
     );
 }

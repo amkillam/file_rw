@@ -1,8 +1,0 @@
-[package]
-name = "test_utils"
-version = "0.1.0"
-edition = "2021"
-description = "Utilities for testing of file_rw"
-authors = ["Adam Killam <adammkillam@gmail.com>"]
-license = "GPL-3.0-or-later"
-readme = "README.md"

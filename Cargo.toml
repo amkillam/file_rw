@@ -13,19 +13,9 @@ repository = "https://github.com/amkillam/file_rw"
 ahash = "0.8.6"
 digest = { version = "0.10.7", features = ["core-api"] }
 filepath = "0.1.1"
+memchr = "2.6.4"
 memmap2 = "0.9.3"
-rayon = "1.8.0"
 sha3 = "0.10.8"
 
 [dev-dependencies]
-criterion = "0.5.1"
-rand = "0.8.5"
 tempfile = "3.8.1"
-test_utils = { path = "test_utils"}
-
-[lib]
-bench = false #disable libtest benchmarking, use Criterion instead
-
-[[bench]]
-name = "preprocessors"
-harness = false
