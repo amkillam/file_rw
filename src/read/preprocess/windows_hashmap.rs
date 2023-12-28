@@ -41,14 +41,14 @@ pub fn hash_windows(bytes: &[u8], pattern_len: usize) -> AHashMap<Box<[u8]>, Vec
 /// O(n^2) preprocessing time, O(n^2) space complexity.
 /// O(1) search time
 pub struct WindowsHashmap {
-    hashmap: AHashMap<Box<[u8]>, Vec<usize>>,
+    hashmap: Box<AHashMap<Box<[u8]>, Vec<usize>>>,
 }
 
 impl Preprocessor for WindowsHashmap {
     fn new(bytes: impl AsRef<[u8]>) -> Self {
         let bytes = bytes.as_ref();
         let bytes_len = bytes.len();
-        let lookup_map: AHashMap<Box<[u8]>, Vec<usize>> = (1..bytes_len)
+        let lookup_map: Box<AHashMap<Box<[u8]>, Vec<usize>>> = Box::new((1..bytes_len)
             .into_par_iter()
             .map(|i| hash_windows(bytes, i))
             .reduce(
@@ -62,7 +62,7 @@ impl Preprocessor for WindowsHashmap {
                     }
                     lookup_map1
                 },
-            );
+            ));
         Self {
             hashmap: lookup_map,
         }
