@@ -16,7 +16,7 @@ use rayon::slice::ParallelSliceMut;
 //already been searched for, and all windows therefore hashed.
 pub struct ContinuousHashmap {
     hashmap: Box<AHashMap<Box<[u8]>, Vec<usize>>>,
-    lengths_searched: Box<[bool]>,
+    lengths_searched: Vec<bool>,
 }
 
 impl ContinuousHashmap {
@@ -34,15 +34,20 @@ impl ContinuousHashmap {
             self.process(bytes, pattern_len);
         }
     }
+
+    fn acceptable_args(&self, pattern: &[u8]) -> bool {
+        pattern.len() > 0 && pattern.len() <= self.lengths_searched.len()
+    }
 }
 
 //Instant
 impl Preprocessor for ContinuousHashmap {
     fn new(bytes: impl AsRef<[u8]>) -> Self {
         let bytes = bytes.as_ref();
+        let bytes_len = bytes.len();
         Self {
             hashmap: Box::new(AHashMap::new()),
-            lengths_searched: vec![false; bytes.as_ref().len()].into_boxed_slice(),
+            lengths_searched: vec![false; bytes_len^2],
         }
     }
 }
@@ -54,6 +59,9 @@ impl Search for ContinuousHashmap {
     fn find_bytes(&mut self, bytes: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Option<usize> {
         let bytes = bytes.as_ref();
         let pattern = pattern.as_ref();
+        if !self.acceptable_args(pattern) {
+            return None;
+        }
 
         self.ensure_processed(bytes, pattern.len());
 
@@ -66,6 +74,10 @@ impl Search for ContinuousHashmap {
     fn rfind_bytes(&mut self, bytes: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Option<usize> {
         let bytes = bytes.as_ref();
         let pattern = pattern.as_ref();
+        if !self.acceptable_args(pattern) {
+            return None;
+        }
+
         self.ensure_processed(bytes, pattern.len());
         self.hashmap.get(pattern).and_then(|v| v.last().copied())
     }
@@ -79,6 +91,10 @@ impl Search for ContinuousHashmap {
     ) -> Option<Vec<usize>> {
         let bytes = bytes.as_ref();
         let pattern = pattern.as_ref();
+        if !self.acceptable_args(pattern) {
+            return None;
+        }
+
         self.ensure_processed(bytes, pattern.len());
         self.hashmap.get(pattern).map(|v| v.to_vec())
     }
@@ -91,14 +107,12 @@ impl Search for ContinuousHashmap {
         bytes: impl AsRef<[u8]>,
         pattern: impl AsRef<[u8]>,
     ) -> Option<Vec<usize>> {
-        let bytes = bytes.as_ref();
-        let pattern = pattern.as_ref();
-        self.ensure_processed(bytes, pattern.len());
-        self.hashmap.get(pattern).and_then(|v| {
-            let mut v = v.to_vec();
-            v.par_sort_unstable_by(|a, b| b.cmp(a));
-            Some(v)
-        })
+        self.find_bytes_all(bytes, pattern)
+            .and_then(|v| {
+                let mut v = v.to_vec();
+                v.par_sort_unstable_by(|a, b| b.cmp(a));
+                Some(v)
+            })
     }
 
     /// Finds the nth occurrence of a byte sequence in the file data.
