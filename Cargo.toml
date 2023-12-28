@@ -18,5 +18,11 @@ rayon = "1.8.0"
 sha3 = "0.10.8"
 
 [dev-dependencies]
+criterion = "0.5.1"
+rand = "0.8.5"
 tempfile = "3.8.1"
 test_utils = { path = "test_utils"}
+
+[[bench]]
+name = "preprocessors"
+harness = false

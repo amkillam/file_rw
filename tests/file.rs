@@ -16,15 +16,23 @@ macro_rules! file_test {
 #[cfg(test)]
 #[test]
 fn test_open_as_write() {
-    file_test!("test_open_as_write", "test", |tempdir, tempdir_path, test_file_path, file| {
-        assert!(file.metadata().unwrap().len() > 0);
-    });
+    file_test!(
+        "test_open_as_write",
+        "test",
+        |tempdir, tempdir_path, test_file_path, file| {
+            assert!(file.metadata().unwrap().len() > 0);
+        }
+    );
 }
 
 #[test]
 fn test_open_as_read() {
-    file_test!("test_open_as_read", "test", |tempdir, tempdir_path, test_file_path, file| {
-        let file = open_as_read(&test_file_path);
-        assert!(file.metadata().unwrap().len() > 0);
-    });
+    file_test!(
+        "test_open_as_read",
+        "test",
+        |tempdir, tempdir_path, test_file_path, file| {
+            let file = open_as_read(&test_file_path);
+            assert!(file.metadata().unwrap().len() > 0);
+        }
+    );
 }
