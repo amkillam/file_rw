@@ -23,7 +23,7 @@ macro_rules! stress_test_preprocessor_fn {
 
 macro_rules! for_each_preprocessor{
     ($file_writer:ident, |$preprocessor:ident, $preprocessor_type_str:ident| $benchmark_block:block) => {
-        
+
         let mut $preprocessor = $file_writer.preprocess_with::<CharIndexMatrix>();
         let $preprocessor_type_str = "CharIndexMatrix";
         $benchmark_block
@@ -37,7 +37,7 @@ macro_rules! for_each_preprocessor{
        $benchmark_block
 
         let mut $preprocessor = $file_writer.preprocess();
-        let $preprocessor_type_str = "ContinuousHashmap";
+        let $preprocessor_type_str = "Default(ContinuousHashmap)";
        $benchmark_block
     };
 }
