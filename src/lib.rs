@@ -1,4 +1,4 @@
-//! # File_RW
+//! # file_rw
 //!
 //! `file_rw` is a Rust library for efficient file reading and writing.
 //!
