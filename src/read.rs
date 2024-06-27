@@ -4,7 +4,7 @@ use filepath::FilePath;
 use memchr::memmem::{find, find_iter, rfind, rfind_iter};
 use memmap2::Mmap;
 use sha3::Sha3_256;
-use std::{fmt, fs::File, path::Path};
+use std::{fmt, fs::File, io, path::Path};
 
 /// The FileReader struct represents a file reader that provides high-performance file reading capabilities.
 /// It uses memory mapping for efficient access to file data.
@@ -30,30 +30,26 @@ impl fmt::Debug for FileReader {
 impl FileReader {
     /// Creates a new FileReader for a given file and path.
     /// It memory maps the file for efficient access.
-    fn new(file: &File, path: impl AsRef<Path> + Send + Sync) -> Self {
-        let mmap = Box::new(unsafe {
-            Mmap::map(file).unwrap_or_else(|err| panic!("Could not mmap file. Error: {}", err))
-        });
+    fn new(file: &File, path: impl AsRef<Path> + Send + Sync) -> io::Result<Self> {
+        let mmap = Box::new(unsafe { Mmap::map(file)? });
 
-        Self {
+        Ok(Self {
             mmap,
             path: Box::new(path.as_ref().to_path_buf()),
-        }
+        })
     }
 
     /// Opens a file and returns a FileReader for it.
     /// The file is identified by its File object.
-    pub fn open_file(file: &File) -> Self {
-        let file_path = file
-            .path()
-            .unwrap_or_else(|err| panic!("Could not get path of writer file. Error: {}", err));
+    pub fn open_file(file: &File) -> io::Result<Self> {
+        let file_path = file.path()?;
         Self::new(file, file_path)
     }
 
     /// Opens a file and returns a FileReader for it.
     /// The file is identified by its path.
-    pub fn open(path: impl AsRef<Path> + Send + Sync) -> Self {
-        let file = open_as_read(path.as_ref());
+    pub fn open(path: impl AsRef<Path> + Send + Sync) -> io::Result<Self> {
+        let file = open_as_read(path.as_ref())?;
         Self::new(&file, path)
     }
 
@@ -73,12 +69,12 @@ impl FileReader {
     }
 
     /// Opens the file for reading and returns the File object.
-    pub fn file(&self) -> File {
+    pub fn file(&self) -> io::Result<File> {
         open_as_read(self.path.as_ref().as_ref())
     }
 
     /// Returns the memory-mapped file.
-    pub fn mmap(&self) -> &Box<Mmap> {
+    pub fn mmap(&self) -> &Mmap {
         &self.mmap
     }
 
@@ -88,13 +84,13 @@ impl FileReader {
     }
 
     /// Opens the file for writing and returns a FileWriter for it.
-    pub fn to_writer(&self) -> FileWriter {
-        FileWriter::open(&self.path.as_ref())
+    pub fn to_writer(&self) -> io::Result<FileWriter> {
+        FileWriter::open(self.path.as_ref())
     }
 
     /// Computes the hash of the file data using a given hash function.
     pub fn hash_with<H: Digest>(&self) -> Output<H> {
-        H::digest(&self.bytes())
+        H::digest(self.bytes())
     }
 
     /// Computes the SHA3-256 hash of the file data.
@@ -105,9 +101,10 @@ impl FileReader {
     /// Computes the hash of the file data and returns it as a hex string.
     pub fn hash_to_string(&self) -> String {
         let hash = self.hash();
-        hash.iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect::<String>()
+        hash.iter().fold("".to_string(), |mut acc, byte| {
+            acc.push_str(&format!("{:02x}", byte));
+            acc
+        })
     }
 
     /// Finds the first occurrence of a byte sequence in the file data.
@@ -155,23 +152,32 @@ impl FileReader {
         file_path1: impl AsRef<Path> + Send + Sync,
         file_path2: impl AsRef<Path> + Send + Sync,
     ) -> bool {
-        let file1_reader = FileReader::open(&file_path1);
-        let file2_reader = FileReader::open(&file_path2);
-        file1_reader.hash() == file2_reader.hash()
+        if let Ok(file1_reader) = FileReader::open(&file_path1) {
+            if let Ok(file2_reader) = FileReader::open(&file_path2) {
+                return file1_reader.hash() == file2_reader.hash();
+            }
+        }
+        false
     }
 
     /// Compares the FileReader's file to another file by their hashes.
     /// It takes a file path `file_path`, and returns true if the files are identical (based on their hashes), false otherwise.
     pub fn compare_to(&self, file_path: impl AsRef<Path> + Send + Sync) -> bool {
-        let file_reader = FileReader::open(&file_path);
-        self.hash() == file_reader.hash()
+        if let Ok(file_reader) = FileReader::open(&file_path) {
+            self.hash() == file_reader.hash()
+        } else {
+            false
+        }
     }
 
     /// Compares the FileReader's file to another file by their hashes.
     /// It takes a File object `file`, and returns true if the files are identical (based on their hashes), false otherwise.
     pub fn compare_to_file(&self, file: &File) -> bool {
-        let file_reader = FileReader::open_file(&file);
-        self.hash() == file_reader.hash()
+        if let Ok(file_reader) = FileReader::open_file(file) {
+            self.hash() == file_reader.hash()
+        } else {
+            false
+        }
     }
 
     /// Compares the hash of the FileReader's file to a given hash.
@@ -186,6 +192,7 @@ impl IntoIterator for FileReader {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     /// Converts the FileReader into an iterator over the bytes of the file data.
+    #[allow(clippy::unnecessary_to_owned)] //Not actually unnecessary in this case
     fn into_iter(self) -> Self::IntoIter {
         self.bytes().to_vec().into_iter()
     }

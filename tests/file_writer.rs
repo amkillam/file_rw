@@ -7,9 +7,9 @@ macro_rules! file_writer_test {
         let $tempdir = tempdir().unwrap();
         let $tempdir_path = $tempdir.path();
         let $test_file_path = $tempdir_path.join($file_name);
-        let mut $file_writer = FileWriter::open(&$test_file_path);
-        $file_writer.overwrite($init_text);
-        let $file_reader = FileReader::open(&$test_file_path);
+        let mut $file_writer = FileWriter::open(&$test_file_path).unwrap();
+        $file_writer.overwrite($init_text).unwrap();
+        let $file_reader = FileReader::open(&$test_file_path).unwrap();
         $block
     }};
 }
@@ -25,9 +25,9 @@ fn test_open_file() {
         .create(true)
         .open(tempdir_path.join("test_open_file"))
         .unwrap();
-    let mut file_writer = FileWriter::open_file(file);
-    file_writer.overwrite("Hello, world!");
-    let file_reader = FileReader::open(tempdir_path.join("test_open_file"));
+    let mut file_writer = FileWriter::open_file(file).unwrap();
+    file_writer.overwrite("Hello, world!").unwrap();
+    let file_reader = FileReader::open(tempdir_path.join("test_open_file")).unwrap();
     assert_eq!(file_reader.read_to_string(), "Hello, world!");
 }
 
@@ -48,7 +48,7 @@ fn extend_len_by() {
         "test_extend_len_by",
         "",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            file_writer.extend_len_by(100);
+            file_writer.extend_len_by(100).unwrap();
             assert!(file_writer.len() == 100);
         }
     );
@@ -60,7 +60,7 @@ fn test_set_len() {
         "test_set_len",
         "",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            file_writer.set_len(100);
+            file_writer.set_len(100).unwrap();
             assert!(file_writer.len() == 100);
         }
     );
@@ -72,7 +72,7 @@ fn test_len() {
         "test_len",
         "",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            file_writer.set_len(100);
+            file_writer.set_len(100).unwrap();
             assert!(file_writer.len() == 100);
         }
     );
@@ -84,7 +84,7 @@ fn test_append() {
         "test_append",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            file_writer.append("Hello, world!");
+            file_writer.append("Hello, world!").unwrap();
             assert!(file_writer.len() == 26);
         }
     );
@@ -131,7 +131,7 @@ fn test_find_replace() {
         "test_find_replace",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            file_writer.find_replace("Hello", "world");
+            file_writer.find_replace("Hello", "world").unwrap();
             assert_eq!(file_reader.read_to_string(), "world, world!");
         }
     );
@@ -143,7 +143,7 @@ fn test_rfind_replace() {
         "test_rfind_replace",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            file_writer.rfind_replace("o", "a");
+            file_writer.rfind_replace("o", "a").unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, warld!");
         }
     );
@@ -155,7 +155,7 @@ fn test_find_replace_nth() {
         "test_find_replace_nth",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            file_writer.find_replace_nth("o", "a", 1);
+            file_writer.find_replace_nth("o", "a", 1).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, warld!");
         }
     );
@@ -167,7 +167,7 @@ fn test_rfind_replace_nth() {
         "test_rfind_replace_nth",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            file_writer.rfind_replace_nth("o", "a", 1);
+            file_writer.rfind_replace_nth("o", "a", 1).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hella, world!");
         }
     );
@@ -179,7 +179,7 @@ fn test_find_replace_all() {
         "test_find_replace_all",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            file_writer.find_replace_all("o", "a");
+            file_writer.find_replace_all("o", "a").unwrap();
             assert_eq!(file_reader.read_to_string(), "Hella, warld!");
         }
     );
@@ -191,8 +191,8 @@ fn test_file() {
         "test_file",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            let file = file_writer.file();
-            let file_reader = FileReader::open_file(&file);
+            let file = file_writer.file().unwrap();
+            let file_reader = FileReader::open_file(&file).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
@@ -205,7 +205,7 @@ fn test_path() {
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
             let path = file_writer.path();
-            let file_reader = FileReader::open(path.as_ref());
+            let file_reader = FileReader::open(path.as_ref()).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
@@ -230,7 +230,7 @@ fn test_to_reader() {
         "test_to_reader",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            let file_reader = file_writer.to_reader();
+            let file_reader = file_writer.to_reader().unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );

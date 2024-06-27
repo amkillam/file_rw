@@ -20,17 +20,17 @@
 //! let tempdir = tempdir().unwrap();
 //! let tempdir_path = tempdir.path();
 //! let test_path = tempdir_path.join("test.txt");
-//! let mut writer = FileWriter::open(&test_path);
+//! let mut writer = FileWriter::open(&test_path).unwrap();
 //! writer.append("Hello World!"); //Hello World!
 //! writer.overwrite("Hello"); //Hello
 //! writer.write("Hullo"); //Hullo
 //!
-//! writer.find_replace_nth("l", "y", 0); //Huylo
-//! writer.find_replace("u", "e"); //Heylo
-//! writer.find_replace("lo", "yyy"); //Heyyyy
-//! writer.find_replace_all("y", "i"); //Heiiii
-//! writer.find_replace("e", "i"); //Hiiiii
-//! let reader = writer.to_reader();
+//! writer.find_replace_nth("l", "y", 0).unwrap(); //Huylo
+//! writer.find_replace("u", "e").unwrap(); //Heylo
+//! writer.find_replace("lo", "yyy").unwrap(); //Heyyyy
+//! writer.find_replace_all("y", "i").unwrap(); //Heiiii
+//! writer.find_replace("e", "i").unwrap(); //Hiiiii
+//! let reader = writer.to_reader().unwrap();
 //! let content = reader.read_to_string();
 //! assert_eq!(content, "Hiiiii");
 //! ```

@@ -52,15 +52,15 @@ fn benchmark_subset_search(c: &mut Criterion) {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
     let test_file_path = tempdir_path.join("test_file");
-    let mut file_writer = FileWriter::open(&test_file_path);
+    let mut file_writer = FileWriter::open(&test_file_path).unwrap();
 
     num_searches_arr.iter().for_each(|num_searches| {
         num_bytes_arr.iter().for_each(|num_bytes| {
             let dataset = gen_dataset(*num_bytes);
             let find_bytes_replace_n_triplets = gen_find_bytes_replace_n_triplets(*num_searches);
             let total_throughput_size = num_searches * num_bytes;
-            file_writer.overwrite(&dataset);
-            let file_reader = FileReader::open(&test_file_path);
+            file_writer.overwrite(&dataset).unwrap();
+            let file_reader = FileReader::open(&test_file_path).unwrap();
 
             benchmark_with_group!(
                 c,
@@ -205,7 +205,9 @@ fn benchmark_subset_search(c: &mut Criterion) {
                             b.iter(|| {
                                 find_bytes_replace_n_triplets.iter().for_each(
                                     |(find_bytes_val, replace_val, _n)| {
-                                        file_writer.find_replace(find_bytes_val, replace_val);
+                                        file_writer
+                                            .find_replace(find_bytes_val, replace_val)
+                                            .unwrap();
                                     },
                                 );
                             });
@@ -227,7 +229,9 @@ fn benchmark_subset_search(c: &mut Criterion) {
                             b.iter(|| {
                                 find_bytes_replace_n_triplets.iter().for_each(
                                     |(find_bytes_val, replace_val, _n)| {
-                                        file_writer.rfind_replace(find_bytes_val, replace_val);
+                                        file_writer
+                                            .rfind_replace(find_bytes_val, replace_val)
+                                            .unwrap();
                                     },
                                 );
                             });
@@ -249,11 +253,9 @@ fn benchmark_subset_search(c: &mut Criterion) {
                             b.iter(|| {
                                 find_bytes_replace_n_triplets.iter().for_each(
                                     |(find_bytes_val, replace_val, n)| {
-                                        file_writer.find_replace_nth(
-                                            find_bytes_val,
-                                            replace_val,
-                                            *n,
-                                        );
+                                        file_writer
+                                            .find_replace_nth(find_bytes_val, replace_val, *n)
+                                            .unwrap();
                                     },
                                 );
                             });
@@ -275,11 +277,9 @@ fn benchmark_subset_search(c: &mut Criterion) {
                             b.iter(|| {
                                 find_bytes_replace_n_triplets.iter().for_each(
                                     |(find_bytes_val, replace_val, n)| {
-                                        file_writer.rfind_replace_nth(
-                                            find_bytes_val,
-                                            replace_val,
-                                            *n,
-                                        );
+                                        file_writer
+                                            .rfind_replace_nth(find_bytes_val, replace_val, *n)
+                                            .unwrap();
                                     },
                                 );
                             });
@@ -301,7 +301,9 @@ fn benchmark_subset_search(c: &mut Criterion) {
                             b.iter(|| {
                                 find_bytes_replace_n_triplets.iter().for_each(
                                     |(find_bytes_val, replace_val, _n)| {
-                                        file_writer.find_replace_all(find_bytes_val, replace_val);
+                                        file_writer
+                                            .find_replace_all(find_bytes_val, replace_val)
+                                            .unwrap();
                                     },
                                 );
                             });

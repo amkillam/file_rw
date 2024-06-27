@@ -11,8 +11,8 @@ macro_rules! file_reader_test {
         let $tempdir_path = $tempdir.path();
         create_test_files(&$tempdir_path);
         let $test_file_path = $tempdir_path.join($file_name);
-        let $file_reader = FileReader::open(&$test_file_path);
-        let mut $file_writer = $file_reader.to_writer();
+        let $file_reader = FileReader::open(&$test_file_path).unwrap();
+        let mut $file_writer = $file_reader.to_writer().unwrap();
         $block
     }};
 }
@@ -53,7 +53,7 @@ fn test_open_file() {
         .read(true)
         .open(tempdir.path().join("test_file"))
         .unwrap();
-    let file_reader = FileReader::open_file(&file);
+    let file_reader = FileReader::open_file(&file).unwrap();
     assert_eq!(file_reader.read_to_string(), "test file\n");
 }
 
@@ -95,6 +95,7 @@ fn test_file() {
             let mut file_text_buffer = String::new();
             file_reader
                 .file()
+                .unwrap()
                 .read_to_string(&mut file_text_buffer)
                 .unwrap_or_else(|_| panic!("Could not read file"));
             let expected_text = "test file\n".to_string();
@@ -299,9 +300,9 @@ fn test_compare_hash() {
         "test_file",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
             let self_hash = file_reader.hash();
-            let file_reader_same = FileReader::open(tempdir_path.join("test_file2"));
+            let file_reader_same = FileReader::open(tempdir_path.join("test_file2")).unwrap();
             let same_hash = file_reader_same.hash();
-            let file_reader_diff = FileReader::open(tempdir_path.join("test_file_diff"));
+            let file_reader_diff = FileReader::open(tempdir_path.join("test_file_diff")).unwrap();
             let diff_hash = file_reader_diff.hash();
             assert!(file_reader.compare_hash::<Sha3_256>(&self_hash));
             assert!(file_reader.compare_hash::<Sha3_256>(&same_hash));
@@ -336,8 +337,8 @@ fn test_eq() {
     file_reader_test!(
         "test_file",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
-            let file_reader_same = FileReader::open(tempdir_path.join("test_file2"));
-            let file_reader_diff = FileReader::open(tempdir_path.join("test_file_diff"));
+            let file_reader_same = FileReader::open(tempdir_path.join("test_file2")).unwrap();
+            let file_reader_diff = FileReader::open(tempdir_path.join("test_file_diff")).unwrap();
             assert_eq!(file_reader, file_reader_same);
             assert_ne!(file_reader, file_reader_diff);
         }
