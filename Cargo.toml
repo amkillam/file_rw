@@ -1,6 +1,6 @@
 [package]
 name = "file_rw"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "A library for high-performance, memory-mapped file I/O utilities."
 categories = ["concurrency", "filesystem", "rust-patterns"]
@@ -29,3 +29,4 @@ bench = false #disable libtest benchmarking, use Criterion instead
 [[bench]]
 name = "subset_search"
 harness = false
+
