@@ -30,7 +30,7 @@ You can include the crate in your Rust project by either:
 
 ```toml
 [dependencies]
-file_rw = "0.3.2"
+file_rw = "0.3.3"
 ```
 
 - Run the following Cargo command to automatically do so:

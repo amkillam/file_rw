@@ -1,6 +1,6 @@
 [package]
 name = "file_rw"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 description = "A library for high-performance, memory-mapped file I/O utilities."
 categories = ["concurrency", "filesystem", "rust-patterns"]
