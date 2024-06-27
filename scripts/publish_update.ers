@@ -58,6 +58,10 @@ fn update_cargo_version(old_version: &str, new_version: &str) {
         format!("version = \"{}\"", new_version).as_str(),
     );
     std::fs::write("Cargo.toml", new_toml_file).expect("failed to write Cargo.toml");
+     Command::new("cargo")
+        .arg("build")
+        .output()
+        .expect("failed to build updated crate"); //To ensure Cargo.lock version is updated as well - easier than manual parsing
 }
 
 fn parse_args() -> String {
@@ -98,7 +102,7 @@ fn main() {
         .arg("Cargo.toml")
         .arg("Cargo.lock")
         .output()
-        .expect("failed to execute git add README.md Cargo.toml");
+        .expect("failed to execute git add README.md Cargo.toml Cargo.lock");
     Command::new("git")
         .arg("commit")
         .arg("-m")

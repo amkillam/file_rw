@@ -47,6 +47,7 @@ update_cargo_version() {
 	old_version=$1
 	new_version=$2
 	sed -i "s/version = \"${old_version}\"/version = \"${new_version}\"/g" Cargo.toml
+	cargo build #To update the Cargo.lock crate version without manual parsing
 }
 
 print_help() {
