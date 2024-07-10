@@ -20,5 +20,7 @@ dependencies = ["clean"]
 [tasks.publish_update]
 dependencies = ["clean", "build", "test"]
 env = { CARGO_MAKE_PROJECT_VERSION = "${CARGO_MAKE_PROJECT_VERSION}" }
-install_crate = { crate_name = "rust-script", binary = "rust-script", test_arg = ["-V"] }
-script = { file = "${CARGO_MAKE_WORKING_DIRECTORY}/scripts/publish_update.ers", absolute_path = true }
+install_crate = { crate_name = "rust-script", binary = "rust-script", test_arg = [
+  "-V",
+] }
+script = { file = "${CARGO_MAKE_WORKING_DIRECTORY}/scripts/publish_update.rs", absolute_path = true }
