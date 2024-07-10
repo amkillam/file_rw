@@ -71,7 +71,7 @@
 //! ```
 //!
 //! ### Hashing
-//! Use the `hashing` feature to enable hashing capabilities - these methods require providing a
+//! Use the `hash` feature to enable hash capabilities - these methods require providing a
 //! `Digest` to hash with.
 //! ```rust
 //! use file_rw::{FileReader, FileWriter};
@@ -85,7 +85,7 @@
 //! writer.overwrite("Hello World!");
 //! let reader = writer.as_reader().unwrap();
 //!
-//! #[cfg(feature = "hashing")]
+//! #[cfg(feature = "hash")]
 //! {
 //!   assert_eq!(reader.hash_to_string_with::<sha3::Sha3_256>(), "d0e47486bbf4c16acac26f8b653592973c1362909f90262877089f9c8a4536af");
 //!   
@@ -98,8 +98,8 @@
 //! ```
 //!
 //! ### SHA3_256 Hashing
-//! Use the `sha3_256` feature to enable SHA3_256 hashing capabilities - this also enables the
-//! `hashing` feature, but provides convenience methods that don't require manually providing a `Digest`.
+//! Use the `sha3_256` feature to enable SHA3_256 hash capabilities - this also enables the
+//! `hash` feature, but provides convenience methods that don't require manually providing a `Digest`.
 //! ```rust
 //! use file_rw::{FileReader, FileWriter};
 //! use tempfile::tempdir;

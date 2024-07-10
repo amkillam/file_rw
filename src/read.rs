@@ -57,10 +57,10 @@ pub(crate) fn rfind_bytes_all<B: AsRef<[u8]>, P: AsRef<[u8]>>(bytes: B, pattern:
     rfind_iter(bytes.as_ref(), pattern.as_ref()).collect::<Vec<usize>>()
 }
 
-#[cfg(feature = "hashing")]
+#[cfg(feature = "hash")]
 use digest::{Digest, Output};
 
-#[cfg(feature = "hashing")]
+#[cfg(feature = "hash")]
 pub fn compare_files_with<H: Digest>(
     file_path1: impl AsRef<Path> + Send + Sync,
     file_path2: impl AsRef<Path> + Send + Sync,
@@ -245,20 +245,20 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
         rfind_bytes_all(self.bytes(), pattern)
     }
 
-    #[cfg(feature = "hashing")]
+    #[cfg(feature = "hash")]
     /// Compares the hash of the FileReader's file to a given hash.
     /// It takes a hash `hash`, and returns true if the hash of the file is identical to the given hash, false otherwise.
     pub fn compare_hash_with<H: Digest>(&self, hash: &Output<H>) -> bool {
         self.hash_with::<H>() == *hash
     }
 
-    #[cfg(feature = "hashing")]
+    #[cfg(feature = "hash")]
     /// Computes the hash of the file data using a given hash function.
     pub fn hash_with<H: Digest>(&self) -> Output<H> {
         H::digest(self.bytes())
     }
 
-    #[cfg(feature = "hashing")]
+    #[cfg(feature = "hash")]
     /// Computes the hash of the file data using the given hash function and returns it as a hex string.
     pub fn hash_to_string_with<H: Digest>(&self) -> String {
         let hash = self.hash_with::<H>();
@@ -268,7 +268,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
         })
     }
 
-    #[cfg(feature = "hashing")]
+    #[cfg(feature = "hash")]
     /// Compares the FileReader's file to another file by their hashes outputted by the given
     /// hash function.
     /// It takes a file path `file_path`, and returns true if the files are identical (based on their hashes), false otherwise.
@@ -283,7 +283,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
         }
     }
 
-    #[cfg(all(feature = "hashing", feature = "filepath"))]
+    #[cfg(all(feature = "hash", feature = "filepath"))]
     /// Compares the FileReader's file to another file by their hashes outputted by the given hash
     /// function.
     /// It takes a File object `file`, and returns true if the files are identical (based on their hashes), false otherwise.

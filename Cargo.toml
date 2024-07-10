@@ -11,8 +11,8 @@ repository = "https://github.com/amkillam/file_rw"
 
 [features]
 default = ["search", "filepath", "sha3_256"]
-hashing = ["dep:digest"]
-sha3_256 = ["dep:sha3", "hashing"]
+hash = ["dep:digest"]
+sha3_256 = ["dep:sha3", "hash"]
 search = ["dep:memchr"]
 filepath = ["dep:filepath"]
 
