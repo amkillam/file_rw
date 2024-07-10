@@ -46,7 +46,7 @@
 //! writer.find_replace("e", "i").unwrap();
 //! assert_eq!(writer.bytes(), b"Hiiiii");
 //!
-//! let reader = writer.to_reader().unwrap();
+//! let reader = writer.as_reader().unwrap();
 //! let content = reader.read_to_string();
 //! assert_eq!(content, "Hiiiii");
 //! ```
