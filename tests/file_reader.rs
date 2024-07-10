@@ -342,12 +342,12 @@ fn test_eq() {
 }
 
 #[test]
-fn test_to_writer_direct() {
+fn test_as_writer() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
     let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
     let file_reader = FileReader::open_file(&write_file).unwrap();
-    let mut writer = file_reader.to_writer_direct().unwrap();
+    let mut writer = file_reader.as_writer().unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
     let reader = writer.to_reader().unwrap();
     assert_eq!(reader.read_to_string(), "testwrite\n");

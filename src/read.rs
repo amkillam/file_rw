@@ -155,7 +155,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     ///By default, unless the file was manually provided using the FileReader::open_file method,
     ///the file will be opened for reading only.
     ///In all other cases, use the FileReader::to_writer method.
-    pub fn to_writer_direct(self) -> io::Result<FileWriter<P>> {
+    pub fn as_writer(self) -> io::Result<FileWriter<P>> {
         Ok(FileWriter {
             mmap: self.mmap.make_mut()?,
             path: self.path,

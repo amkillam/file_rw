@@ -236,3 +236,15 @@ fn test_to_reader() {
         }
     );
 }
+
+#[test]
+fn test_as_reader() {
+    file_writer_test!(
+        "test_as_reader",
+        "Hello, world!",
+        |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
+            let file_reader = file_writer.as_reader().unwrap();
+            assert_eq!(file_reader.read_to_string(), "Hello, world!");
+        }
+    );
+}
