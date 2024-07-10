@@ -155,7 +155,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     ///This is safe ONLY if the file used in the FileReader was opened for writing.
     ///If the file was opened only for reading, this will cause undefined behavior.
     ///By default, unless the file was manually provided using the FileReader::open_file method,
-    ///the file will be opeend for reading only.
+    ///the file will be opened for reading only.
     ///In all other cases, use the FileReader::to_writer method.
     pub unsafe fn to_writer_direct(self) -> FileWriter<P> {
         //SAFETY

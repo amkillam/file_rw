@@ -250,7 +250,7 @@ fn test_rfind_bytes_nth() {
 fn test_compare_files() {
     file_reader_test!(
         "test_file",
-        |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
+        |tempdir, tempdir_path, test_file_path, _file_writer, _file_reader| {
             let file_reader_same_path = tempdir_path.join("test_file2");
             let file_reader_diff_path = tempdir_path.join("test_file_diff");
             assert!(compare_files(&test_file_path, &file_reader_same_path));
@@ -348,7 +348,7 @@ fn test_to_writer_direct() {
     let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
     let file_reader = FileReader::open_file(&write_file).unwrap();
     let mut writer = unsafe { file_reader.to_writer_direct() };
-    writer.overwrite(b"testwrite\n");
+    writer.overwrite(b"testwrite\n").unwrap();
     let reader = writer.to_reader();
     assert_eq!(reader.read_to_string(), "testwrite\n");
 
