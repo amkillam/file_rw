@@ -33,7 +33,7 @@ You can include the crate in your Rust project by either:
 file_rw = "0.4.3"
 ```
 
-- Run the following Cargo command to automatically do so:
+- Running the following Cargo command to automatically do so:
 
 ```bash
 cargo add file_rw
