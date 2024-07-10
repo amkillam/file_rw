@@ -1,6 +1,6 @@
 use crate::{file::open_as_write, read, FileReader};
 use filepath::FilePath;
-use memmap2::MmapMut;
+use memmap2::{Mmap, MmapMut};
 use std::{
     fmt,
     fs::File,
@@ -219,8 +219,15 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     }
 
     /// Returns a mutable reference to the memory-mapped file.
-    pub fn mmap(&mut self) -> &mut MmapMut {
+    pub fn mmap_mut(&mut self) -> &mut MmapMut {
         &mut self.mmap
+    }
+
+    /// Returns an immutable reference to the memory-mapped file.
+    /// This fails if the file backing the mmap was not opened as both read and write.
+    /// By default, unless the file was manually provided using FileWriter::open_file, the file is opened as both read and write.
+    pub fn mmap(self) -> io::Result<Mmap> {
+        self.mmap.make_read_only()
     }
 
     pub fn to_reader(self) -> io::Result<FileReader<P>> {
@@ -229,7 +236,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
 
     /// Converts the `FileWriter` into a `FileReader`.
     /// This fails if the file backing the mmap was not opened as both read and write.
-    /// By default, unless the file was mnually provided using FileWriter::open_file, the file is opened as both read and write.
+    /// By default, unless the file was manually provided using FileWriter::open_file, the file is opened as both read and write.
     /// In the event that a file was opened as write-only and passed to FileWriter::open_file, use
     /// FileWriter::to_reader instead
     pub fn as_reader(self) -> io::Result<FileReader<P>> {

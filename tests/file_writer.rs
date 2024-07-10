@@ -213,12 +213,12 @@ fn test_path() {
 }
 
 #[test]
-fn test_mmap() {
+fn test_mmap_mut() {
     file_writer_test!(
         "test_mmap",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
-            let mmap = file_writer.mmap();
+            let mmap = file_writer.mmap_mut();
             mmap[..].copy_from_slice("Hullo, world!".as_bytes());
             assert_eq!(file_reader.read_to_string(), "Hullo, world!");
         }
@@ -247,4 +247,16 @@ fn test_as_reader() {
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
+}
+
+#[test]
+fn test_mmap() {
+    file_writer_test!(
+        "test_mmap",
+        "Hello, world!",
+        |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
+            let mmap = file_writer.mmap().unwrap();
+            assert_eq!(&mmap[..], b"Hello, world!");
+        }
+    )
 }

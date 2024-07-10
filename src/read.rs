@@ -2,7 +2,7 @@ use crate::{file::open_as_read, FileWriter};
 use digest::{Digest, Output};
 use filepath::FilePath;
 use memchr::memmem::{find, find_iter, rfind, rfind_iter};
-use memmap2::Mmap;
+use memmap2::{Mmap, MmapMut};
 use sha3::Sha3_256;
 use std::{
     fmt,
@@ -121,6 +121,20 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// Reads the entire file to a string.
     pub fn read_to_string(&self) -> String {
         self.bytes().iter().map(|c| *c as char).collect::<String>()
+    }
+
+    /// Returns a reference to the FileReader's mmap
+    /// This is useful for cases where the mmap needs to be accessed directly.
+    pub fn mmap(&self) -> &Mmap {
+        &self.mmap
+    }
+
+    ///Returns a mutable reference to the FileReader's mmap.
+    /// This is useful for cases where the mmap needs to be modified directly.
+    /// This fails if the file was not opened for writing, which is the default,
+    /// unless the file was manually provided using the FileReader::open_file method.
+    pub fn mmap_mut(self) -> io::Result<MmapMut> {
+        self.mmap.make_mut()
     }
 
     /// Returns a slice of bytes representing the file data.

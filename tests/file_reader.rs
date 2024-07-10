@@ -355,3 +355,20 @@ fn test_as_writer() {
     let new_file_reader = FileReader::open_file(&write_file).unwrap();
     assert_eq!(new_file_reader.read_to_string(), "testwrite\n");
 }
+
+#[test]
+fn test_mmap_mut() {
+    let tempdir = tempdir().unwrap();
+    let tempdir_path = tempdir.path();
+    let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
+    let mut writer = FileWriter::open_file(&write_file).unwrap();
+    writer.overwrite(b"testwrite\n").unwrap();
+    let file_reader = FileReader::open_file(&write_file).unwrap();
+    let mut mmap_mut = file_reader.mmap_mut().unwrap();
+    assert_eq!(&mmap_mut[..], b"testwrite\n");
+    mmap_mut.copy_from_slice(b"newwrite2\n");
+    assert_eq!(&mmap_mut[..], b"newwrite2\n");
+
+    let file_reader_new = FileReader::open_file(&write_file).unwrap();
+    assert_eq!(file_reader_new.read_to_string(), "newwrite2\n");
+}
