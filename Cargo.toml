@@ -10,24 +10,35 @@ readme = "README.md"
 repository = "https://github.com/amkillam/file_rw"
 
 [features]
-default = ["search", "filepath", "sha3_256"]
+default = ["search", "filepath", "sha3_256", "std"]
 hash = ["dep:digest"]
 sha3_256 = ["dep:sha3", "hash"]
 search = ["dep:memchr"]
 filepath = ["dep:filepath"]
+std = [
+  "memchr/std",
+  "digest/std",
+  "sha3/std",
+] #Crate is not currently no_std compatible!
+alloc = ["memchr/alloc", "digest/alloc"] #Crate itself uses alloc regardless!
 
 [dependencies]
-digest = { version = "0.10.7", features = ["core-api"], optional = true }
+digest = { version = "0.10.7", features = [
+  "core-api",
+], optional = true, default-features = false }
 filepath = { version = "0.1.2", optional = true }
-memchr = { version = "2.7.4", optional = true }
+memchr = { version = "2.7.4", optional = true, default-features = false }
 memmap2 = "0.9.4"
-sha3 = { version = "0.10.8", optional = true }
+sha3 = { version = "0.10.8", optional = true, default-features = false, features = [
+  "oid",
+] }
 
 [dev-dependencies]
 criterion = "0.5.1"
 rand = "0.8.5"
 tempfile = "3.10.1"
 sha3 = "0.10.8"
+hex-literal = "0.4.1"
 
 
 [lib]
