@@ -25,7 +25,7 @@ fn test_open_file() {
         .create(true)
         .open(tempdir_path.join("test_open_file"))
         .unwrap();
-    let mut file_writer = FileWriter::open_file(file).unwrap();
+    let mut file_writer = FileWriter::open_file(&file).unwrap();
     file_writer.overwrite("Hello, world!").unwrap();
     let file_reader = FileReader::open(tempdir_path.join("test_open_file")).unwrap();
     assert_eq!(file_reader.read_to_string(), "Hello, world!");
@@ -205,7 +205,7 @@ fn test_path() {
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
             let path = file_writer.path();
-            let file_reader = FileReader::open(path.as_ref()).unwrap();
+            let file_reader = FileReader::open(path).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
@@ -230,7 +230,7 @@ fn test_to_reader() {
         "test_to_reader",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            let file_reader = file_writer.to_reader().unwrap();
+            let file_reader = file_writer.to_reader();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
