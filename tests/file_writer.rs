@@ -1,5 +1,4 @@
 use file_rw::{FileReader, FileWriter};
-use std::fs::OpenOptions;
 use tempfile::tempdir;
 
 macro_rules! file_writer_test {
@@ -15,12 +14,13 @@ macro_rules! file_writer_test {
 }
 
 #[cfg(test)]
+#[cfg(feature = "filepath")]
 #[test]
 #[allow(clippy::suspicious_open_options)] //open option create(true) is on purpose - create iff file does not exist
 fn test_open_file() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let file = OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
@@ -126,6 +126,7 @@ fn test_replace() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_replace() {
     file_writer_test!(
@@ -138,6 +139,7 @@ fn test_find_replace() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_rfind_replace() {
     file_writer_test!(
@@ -150,6 +152,7 @@ fn test_rfind_replace() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_replace_nth() {
     file_writer_test!(
@@ -162,6 +165,7 @@ fn test_find_replace_nth() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_rfind_replace_nth() {
     file_writer_test!(
@@ -174,6 +178,7 @@ fn test_rfind_replace_nth() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_replace_all() {
     file_writer_test!(
@@ -193,12 +198,13 @@ fn test_file() {
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
             let file = file_writer.file().unwrap();
-            let file_reader = FileReader::open_file(&file).unwrap();
+            let file_reader = FileReader::open_file_at_path(&file, file_writer.path).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );
 }
 
+#[cfg(feature = "filepath")]
 #[test]
 fn test_path() {
     file_writer_test!(

@@ -9,18 +9,25 @@ license = "GPL-3.0-or-later"
 readme = "README.md"
 repository = "https://github.com/amkillam/file_rw"
 
+[features]
+default = ["search", "filepath", "sha3_256"]
+hashing = ["dep:digest"]
+sha3_256 = ["dep:sha3", "hashing"]
+search = ["dep:memchr"]
+filepath = ["dep:filepath"]
+
 [dependencies]
-ahash = "0.8.11"
-digest = { version = "0.10.7", features = ["core-api"] }
-filepath = "0.1.2"
-memchr = "2.7.4"
+digest = { version = "0.10.7", features = ["core-api"], optional = true }
+filepath = { version = "0.1.2", optional = true }
+memchr = { version = "2.7.4", optional = true }
 memmap2 = "0.9.4"
-sha3 = "0.10.8"
+sha3 = { version = "0.10.8", optional = true }
 
 [dev-dependencies]
 criterion = "0.5.1"
 rand = "0.8.5"
 tempfile = "3.10.1"
+sha3 = "0.10.8"
 
 
 [lib]

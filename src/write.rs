@@ -1,12 +1,6 @@
-use crate::{file::open_as_write, read, FileReader};
-use filepath::FilePath;
+use crate::{file::open_as_write, FileReader};
 use memmap2::{Mmap, MmapMut};
-use std::{
-    fmt,
-    fs::File,
-    io,
-    path::{Path, PathBuf},
-};
+use std::{fmt, fs::File, io, path::Path};
 
 /// `FileWriter` is a structure that allows writing to a file.
 /// It uses memory-mapped files for efficient file manipulation.
@@ -29,9 +23,11 @@ impl<P: AsRef<Path> + Send + Sync> fmt::Debug for FileWriter<P> {
     }
 }
 
-impl FileWriter<PathBuf> {
+#[cfg(feature = "filepath")]
+use filepath::FilePath;
+#[cfg(feature = "filepath")]
+impl FileWriter<std::path::PathBuf> {
     /// Opens a file and returns a `FileWriter` instance.
-    /// It panics if it cannot get the path of the writer file.
     pub fn open_file(file: &File) -> io::Result<Self> {
         let path = file.path()?;
 
@@ -46,6 +42,11 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         let mmap = unsafe { MmapMut::map_mut(file)? };
 
         Ok(Self { mmap, path })
+    }
+
+    /// Opens a file at the provided path and returns a `FileWriter` instance.
+    pub fn open_file_at_path(file: &File, path: P) -> io::Result<Self> {
+        Self::new(file, path)
     }
 
     /// Opens a file in write mode and returns a `FileWriter` instance.
@@ -98,6 +99,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         self
     }
 
+    #[cfg(feature = "search")]
     fn find_replace_inner<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
         &mut self,
         find: B,
@@ -117,6 +119,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
+    #[cfg(feature = "search")]
     /// Finds a sequence of bytes in the file and replaces it with another sequence of bytes.
     /// If the sequence to find is not found, it does nothing.
     pub fn find_replace<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
@@ -124,25 +127,27 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         find: B,
         replace: BO,
     ) -> io::Result<&Self> {
-        if let Some(offset) = read::find_bytes(self.bytes(), &find) {
+        if let Some(offset) = crate::read::find_bytes(self.bytes(), &find) {
             self.find_replace_inner(&find, &replace, offset)?;
         }
 
         Ok(self)
     }
 
+    #[cfg(feature = "search")]
     /// Finds the last occurrence of a slice of bytes in the file and replaces it with another slice of bytes.
     pub fn rfind_replace<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
         &mut self,
         find: B,
         replace: BO,
     ) -> io::Result<&Self> {
-        if let Some(offset) = read::rfind_bytes(self.bytes(), &find) {
+        if let Some(offset) = crate::read::rfind_bytes(self.bytes(), &find) {
             self.find_replace_inner(&find, &replace, offset)?;
         }
         Ok(self)
     }
 
+    #[cfg(feature = "search")]
     /// Finds the nth occurrence of a slice of bytes in the file, in reverse order, and replaces it with another slice of bytes.
     pub fn rfind_replace_nth<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
         &mut self,
@@ -150,12 +155,13 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         replace: BO,
         n: usize,
     ) -> io::Result<&Self> {
-        if let Some(offset) = read::rfind_bytes_nth(self.bytes(), &find, n) {
+        if let Some(offset) = crate::read::rfind_bytes_nth(self.bytes(), &find, n) {
             self.find_replace_inner(&find, &replace, offset)?;
         }
         Ok(self)
     }
 
+    #[cfg(feature = "search")]
     /// Finds the nth occurrence of a slice of bytes in the file and replaces it with another slice of bytes.
     /// If the slice to find is not found, no replacement occurs.
     pub fn find_replace_nth<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
@@ -164,19 +170,20 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         replace: BO,
         n: usize,
     ) -> io::Result<&Self> {
-        if let Some(offset) = read::find_bytes_nth(self.bytes(), &find, n) {
+        if let Some(offset) = crate::read::find_bytes_nth(self.bytes(), &find, n) {
             self.find_replace_inner(&find, &replace, offset)?;
         }
         Ok(self)
     }
 
+    #[cfg(feature = "search")]
     /// Finds all occurrences of a slice of bytes in the file and replaces them with another slice of bytes.
     pub fn find_replace_all<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
         &mut self,
         find: B,
         replace: BO,
     ) -> io::Result<&Self> {
-        for offset in &read::find_bytes_all(self.bytes(), &find) {
+        for offset in &crate::read::find_bytes_all(self.bytes(), &find) {
             self.find_replace_inner(&find, &replace, offset.to_owned())?;
         }
         Ok(self)

@@ -1,6 +1,7 @@
-use file_rw::{compare_files, file, FileReader, FileWriter};
-use sha3::{Digest, Sha3_256};
-use std::fs::{File, OpenOptions};
+use file_rw::{file, FileReader, FileWriter};
+#[cfg(feature = "sha3_256")]
+use sha3::Digest;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use tempfile::tempdir;
@@ -21,17 +22,17 @@ macro_rules! file_reader_test {
 
 fn create_test_files(dir: &Path) {
     let mut file = File::create(dir.join("test_file")).unwrap();
-    file.write(b"test file\n").unwrap();
+    file.write_all(b"test file\n").unwrap();
 
     let mut file2 = File::create(dir.join("test_file2")).unwrap();
-    file2.write(b"test file\n").unwrap();
+    file2.write_all(b"test file\n").unwrap();
 
     let mut diff_file = File::create(dir.join("test_file_diff")).unwrap();
-    diff_file.write(b"test file diff\n").unwrap();
+    diff_file.write_all(b"test file diff\n").unwrap();
 
     let mut find_bytes_file = File::create(dir.join("test_find_bytes")).unwrap();
     find_bytes_file
-        .write(b"        test test test test\n")
+        .write_all(b"        test test test test\n")
         .unwrap();
 }
 
@@ -45,11 +46,12 @@ fn test_open() {
     );
 }
 
+#[cfg(feature = "filepath")]
 #[test]
 fn test_open_file() {
     let tempdir = tempdir().unwrap();
     create_test_files(tempdir.path());
-    let file = OpenOptions::new()
+    let file = std::fs::OpenOptions::new()
         .read(true)
         .open(tempdir.path().join("test_file"))
         .unwrap();
@@ -135,6 +137,7 @@ fn test_to_writer() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_hash() {
     file_reader_test!(
@@ -146,6 +149,7 @@ fn test_hash() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_hash_with() {
     file_reader_test!(
@@ -157,6 +161,7 @@ fn test_hash_with() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_hash_to_string() {
     file_reader_test!(
@@ -169,6 +174,7 @@ fn test_hash_to_string() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_bytes() {
     file_reader_test!(
@@ -181,6 +187,7 @@ fn test_find_bytes() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_rfind_bytes() {
     file_reader_test!(
@@ -194,6 +201,7 @@ fn test_rfind_bytes() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_bytes_all() {
     file_reader_test!(
@@ -207,6 +215,7 @@ fn test_find_bytes_all() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_rfind_bytes_all() {
     file_reader_test!(
@@ -220,6 +229,7 @@ fn test_rfind_bytes_all() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_find_bytes_nth() {
     file_reader_test!(
@@ -233,6 +243,7 @@ fn test_find_bytes_nth() {
     );
 }
 
+#[cfg(feature = "search")]
 #[test]
 fn test_rfind_bytes_nth() {
     file_reader_test!(
@@ -246,6 +257,7 @@ fn test_rfind_bytes_nth() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_compare_files() {
     file_reader_test!(
@@ -253,9 +265,15 @@ fn test_compare_files() {
         |tempdir, tempdir_path, test_file_path, _file_writer, _file_reader| {
             let file_reader_same_path = tempdir_path.join("test_file2");
             let file_reader_diff_path = tempdir_path.join("test_file_diff");
-            assert!(compare_files(&test_file_path, &file_reader_same_path));
-            assert!(!compare_files(&test_file_path, &file_reader_diff_path));
-            assert!(!compare_files(
+            assert!(file_rw::read::compare_files(
+                &test_file_path,
+                &file_reader_same_path
+            ));
+            assert!(!file_rw::read::compare_files(
+                &test_file_path,
+                &file_reader_diff_path
+            ));
+            assert!(!file_rw::read::compare_files(
                 &file_reader_same_path,
                 &file_reader_diff_path
             ));
@@ -263,23 +281,25 @@ fn test_compare_files() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_compare_to() {
     file_reader_test!(
         "test_file",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
-            assert!(file_reader.compare_to(tempdir_path.join("test_file2")));
-            assert!(!file_reader.compare_to(tempdir_path.join("test_file_diff")));
+            assert!(file_reader.compare_to_file_at_path(tempdir_path.join("test_file2")));
+            assert!(!file_reader.compare_to_file_at_path(tempdir_path.join("test_file_diff")));
         }
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_compare_to_file() {
     file_reader_test!(
         "test_file",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
-            let file = OpenOptions::new()
+            let file = std::fs::OpenOptions::new()
                 .read(true)
                 .open(tempdir_path.join("test_file2"))
                 .unwrap();
@@ -288,6 +308,7 @@ fn test_compare_to_file() {
     );
 }
 
+#[cfg(feature = "sha3_256")]
 #[test]
 fn test_compare_hash() {
     file_reader_test!(
@@ -298,9 +319,9 @@ fn test_compare_hash() {
             let same_hash = file_reader_same.hash();
             let file_reader_diff = FileReader::open(tempdir_path.join("test_file_diff")).unwrap();
             let diff_hash = file_reader_diff.hash();
-            assert!(file_reader.compare_hash::<Sha3_256>(&self_hash));
-            assert!(file_reader.compare_hash::<Sha3_256>(&same_hash));
-            assert!(!file_reader.compare_hash::<Sha3_256>(&diff_hash));
+            assert!(file_reader.compare_hash(&self_hash));
+            assert!(file_reader.compare_hash(&same_hash));
+            assert!(!file_reader.compare_hash(&diff_hash));
         }
     );
 }
@@ -345,14 +366,16 @@ fn test_eq() {
 fn test_as_writer() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
-    let file_reader = FileReader::open_file(&write_file).unwrap();
+    let write_file_path_buf = tempdir_path.join("write_file");
+    let write_file_path = write_file_path_buf.as_path();
+    let write_file = file::open_as_write(write_file_path).unwrap();
+    let file_reader = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
     let mut writer = file_reader.as_writer().unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
     let reader = writer.to_reader().unwrap();
     assert_eq!(reader.read_to_string(), "testwrite\n");
 
-    let new_file_reader = FileReader::open_file(&write_file).unwrap();
+    let new_file_reader = FileReader::open_file_at_path(&write_file, &write_file_path).unwrap();
     assert_eq!(new_file_reader.read_to_string(), "testwrite\n");
 }
 
@@ -360,15 +383,17 @@ fn test_as_writer() {
 fn test_mmap_mut() {
     let tempdir = tempdir().unwrap();
     let tempdir_path = tempdir.path();
-    let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
-    let mut writer = FileWriter::open_file(&write_file).unwrap();
+    let write_file_path_buf = tempdir_path.join("write_file");
+    let write_file_path = write_file_path_buf.as_path();
+    let write_file = file::open_as_write(write_file_path).unwrap();
+    let mut writer = FileWriter::open_file_at_path(&write_file, write_file_path).unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
-    let file_reader = FileReader::open_file(&write_file).unwrap();
+    let file_reader = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
     let mut mmap_mut = file_reader.mmap_mut().unwrap();
     assert_eq!(&mmap_mut[..], b"testwrite\n");
     mmap_mut.copy_from_slice(b"newwrite2\n");
     assert_eq!(&mmap_mut[..], b"newwrite2\n");
 
-    let file_reader_new = FileReader::open_file(&write_file).unwrap();
+    let file_reader_new = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
     assert_eq!(file_reader_new.read_to_string(), "newwrite2\n");
 }
