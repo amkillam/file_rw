@@ -150,24 +150,16 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     }
 
     ///Directly transmutes FileReader into a FileWriter.
-    ///# Safety
-    ///
-    ///This is safe ONLY if the file used in the FileReader was opened for writing.
-    ///If the file was opened only for reading, this will cause undefined behavior.
+    ///This will fail if the file used in the FileReader was not opened for writing.
+    ///If the file was opened only for reading, this will return an error.
     ///By default, unless the file was manually provided using the FileReader::open_file method,
     ///the file will be opened for reading only.
     ///In all other cases, use the FileReader::to_writer method.
-    pub unsafe fn to_writer_direct(self) -> FileWriter<P> {
-        //SAFETY
-        //Mmap:
-        //This is safe because the memory-mapped file is not dropped.
-        //Mmap and MmapMut have the same  memory layout - they are both wrappers around a pointer to a memory-mapped file.
-        //Mmap only adds an additional immutability restriction.
-        //<P>:
-        //transmute_unchecked must be used instead of transmute due to the unsized nature of P.
-        //However, P will be the exact same type in both FileWriter and FileReader, so this is safe
-        //to do regardless.
-        unsafe { core::intrinsics::transmute_unchecked::<FileReader<P>, FileWriter<P>>(self) }
+    pub fn to_writer_direct(self) -> io::Result<FileWriter<P>> {
+        Ok(FileWriter {
+            mmap: self.mmap.make_mut()?,
+            path: self.path,
+        })
     }
 
     /// Computes the hash of the file data using a given hash function.

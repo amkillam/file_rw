@@ -30,19 +30,13 @@
 //! writer.find_replace("lo", "yyy").unwrap(); //Heyyyy
 //! writer.find_replace_all("y", "i").unwrap(); //Heiiii
 //! writer.find_replace("e", "i").unwrap(); //Hiiiii
-//! let reader = writer.to_reader();
+//! let reader = writer.to_reader().unwrap();
 //! let content = reader.read_to_string();
 //! assert_eq!(content, "Hiiiii");
 //! ```
 
 #![crate_name = "file_rw"]
 #![crate_type = "lib"]
-//Necessary for usage of intrinsics::transmute_unchecked to directly transmute between FileWriter
-//and FileReader. Using transmute instead does not work, as the generic used to define structs'
-//path field is unsized. However, as the field value will be identical in both structs,
-//transmute_unchecked is safe regardless, as shown in the tests.
-#![feature(core_intrinsics)]
-#![allow(internal_features)]
 
 pub mod file; //mainly pub for use in tests
 mod read;

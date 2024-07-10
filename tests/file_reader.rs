@@ -347,9 +347,9 @@ fn test_to_writer_direct() {
     let tempdir_path = tempdir.path();
     let write_file = file::open_as_write(tempdir_path.join("write_file").as_path()).unwrap();
     let file_reader = FileReader::open_file(&write_file).unwrap();
-    let mut writer = unsafe { file_reader.to_writer_direct() };
+    let mut writer = file_reader.to_writer_direct().unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
-    let reader = writer.to_reader();
+    let reader = writer.to_reader().unwrap();
     assert_eq!(reader.read_to_string(), "testwrite\n");
 
     let new_file_reader = FileReader::open_file(&write_file).unwrap();

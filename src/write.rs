@@ -224,7 +224,9 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     }
 
     /// Converts the `FileWriter` into a `FileReader`.
-    pub fn to_reader(self) -> FileReader<P> {
+    /// This fails if the file backing the mmap was not opened as both read and write.
+    /// By default, unless the file was mnually provided using FileWriter::open_file, the file is opened as both read and write.
+    pub fn to_reader(self) -> io::Result<FileReader<P>> {
         //SAFETY
         //Mmap:
         //This is safe because the memory-mapped file is already opened as both read and write. In
@@ -232,10 +234,9 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         //have to be opened as write, which is otherwise unnecessary.
         //Mmap and MmapMut have the same  memory layout - they are both wrappers around a pointer to a memory-mapped file.
         //Mmap only adds an additional immutability restriction.
-        //<P>:
-        //transmute_unchecked must be used instead of transmute due to the unsized nature of P.
-        //However, P will be the exact same type in both FileWriter and FileReader, so this is safe
-        //to do regardless.
-        unsafe { core::intrinsics::transmute_unchecked::<FileWriter<P>, FileReader<P>>(self) }
+        Ok(FileReader {
+            mmap: self.mmap.make_read_only()?,
+            path: self.path,
+        })
     }
 }
