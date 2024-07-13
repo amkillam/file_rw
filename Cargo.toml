@@ -10,7 +10,7 @@ readme = "README.md"
 repository = "https://github.com/amkillam/file_rw"
 
 [features]
-default = ["search", "filepath", "sha3_256", "std"]
+default = ["search", "filepath", "sha3_256", "std", "alloc"]
 hash = ["dep:digest"]
 sha3_256 = ["dep:sha3", "hash"]
 search = ["dep:memchr"]
