@@ -1,5 +1,5 @@
 use crate::{file::open_as_write, FileReader};
-use memmap2::{Mmap, MmapMut, RemapOptions};
+use memmap2::{Mmap, MmapMut};
 use std::{fmt, fs::File, io, path::Path};
 
 /// `FileWriter` is a structure that allows writing to a file.
