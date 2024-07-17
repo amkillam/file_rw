@@ -221,14 +221,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     /// Sets the length of the file.
     pub fn set_len(&mut self, len: usize) -> io::Result<&mut Self> {
         self.file.set_len(len as u64)?;
-        #[cfg(target_family = "unix")]
-        unsafe {
-            self.mmap.remap(len as u64 as usize, RemapOptions::new())?
-        };
-        #[cfg(not(target_family = "unix"))]
-        {
-            self.mmap = unsafe { MmapMut::map_mut(&self.file)? };
-        }
+        self.mmap = unsafe { MmapMut::map_mut(&self.file)? };
         Ok(self)
     }
 
