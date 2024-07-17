@@ -62,11 +62,13 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         self
     }
 
+    /// Writes bytes to the file at the provided offset.
     pub fn write_to_offset<B: AsRef<[u8]>>(&mut self, bytes: B, offset: usize) -> &Self {
         self.mmap[offset..offset + bytes.as_ref().len()].copy_from_slice(bytes.as_ref());
         self
     }
 
+    /// Appends bytes to the file, extending the file length if necessary.
     pub fn append<B: AsRef<[u8]>>(&mut self, bytes: B) -> io::Result<&Self> {
         let current_len = self.mmap.len();
         let bytes = bytes.as_ref();
@@ -76,6 +78,8 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
+    /// Overwrites the entire content of the file with the provided bytes. The file's length is
+    /// extended if the provided bytes are longer than the current file length.
     pub fn overwrite<B: AsRef<[u8]>>(&mut self, bytes: B) -> io::Result<&Self> {
         let bytes = bytes.as_ref();
         let len = bytes.len();
@@ -84,10 +88,17 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
+    ///Returns length of the file data
+    pub fn len(&self) -> usize {
+        self.mmap.len()
+    }
+
+    /// Returns a mutable reference to the bytes of the file.
     pub fn bytes_mut(&mut self) -> &mut [u8] {
         &mut self.mmap[..]
     }
 
+    /// Returns an immutable reference to the bytes of the file.
     pub fn bytes(&self) -> &[u8] {
         &self.mmap[..]
     }
@@ -100,6 +111,8 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     }
 
     #[cfg(feature = "search")]
+    /// Finds a sequence of bytes in the file and replaces it with another sequence of bytes. If the sequence to find is not found, it does nothing.
+    /// If the sequence would be written past the length of the file, the file is extended to accommodate the new bytes.
     fn find_replace_inner<B: AsRef<[u8]>, BO: AsRef<[u8]>>(
         &mut self,
         find: B,
@@ -194,18 +207,12 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         open_as_write(self.path.as_ref())
     }
 
-    pub fn len(&mut self) -> u64 {
-        if let Ok(file) = self.file() {
-            file.metadata().unwrap().len()
-        } else {
-            0
-        }
-    }
-
+    /// Checks if the file has a length of zero.
     pub fn is_empty(&mut self) -> bool {
         self.len() == 0
     }
 
+    /// Sets the length of the file.
     pub fn set_len(&mut self, len: u64) -> io::Result<&mut Self> {
         let file = self.file()?;
         file.set_len(len)?;
@@ -213,6 +220,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
+    /// Extends the length of the file by the provided length.
     pub fn extend_len_by(&mut self, len: u64) -> io::Result<&mut Self> {
         let current_len = self.len();
         let new_len = current_len + len;
@@ -237,6 +245,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         self.mmap.make_read_only()
     }
 
+    /// Converts the `FileWriter` into a `FileReader` by opening the file as read-only.
     pub fn to_reader(self) -> io::Result<FileReader<P>> {
         FileReader::open(self.path)
     }

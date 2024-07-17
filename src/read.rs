@@ -162,6 +162,11 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
         self.mmap.make_mut()
     }
 
+    /// Returns length of the file data.
+    pub fn len(&self) -> usize {
+        self.mmap.len()
+    }
+
     /// Returns a slice of bytes representing the file data.
     pub fn bytes(&self) -> &[u8] {
         &self.mmap[..]
