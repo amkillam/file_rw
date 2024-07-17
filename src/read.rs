@@ -337,6 +337,15 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     }
 }
 
+impl<P: AsRef<Path> + Send + Sync> io::Read for FileReader<P> {
+    /// Reads the file data into a buffer.
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let copy_len = std::cmp::min(buf.len(), self.len());
+        buf[..copy_len].copy_from_slice(&self.mmap[..copy_len]);
+        Ok(copy_len)
+    }
+}
+
 impl<P: AsRef<Path> + Send + Sync> IntoIterator for FileReader<P> {
     type Item = u8;
     type IntoIter = std::vec::IntoIter<Self::Item>;
