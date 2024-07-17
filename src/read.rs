@@ -95,7 +95,7 @@ use filepath::FilePath;
 #[cfg(feature = "filepath")]
 impl FileReader<std::path::PathBuf> {
     /// Opens a file and returns a FileReader for it.
-    pub fn open_file(file: &File) -> io::Result<Self> {
+    pub fn open_file(file: File) -> io::Result<Self> {
         let file_path = file.path()?;
         FileReader::<std::path::PathBuf>::new(file, file_path)
     }
@@ -106,6 +106,7 @@ impl FileReader<std::path::PathBuf> {
 pub struct FileReader<P: AsRef<Path> + Send + Sync> {
     pub mmap: Mmap,
     pub path: P,
+    pub file: File,
 }
 
 impl<P: AsRef<Path> + Send + Sync> fmt::Display for FileReader<P> {
@@ -125,21 +126,21 @@ impl<P: AsRef<Path> + Send + Sync> fmt::Debug for FileReader<P> {
 impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// Creates a new FileReader for a given file and path.
     /// It memory maps the file for efficient access.
-    fn new(file: &File, path: P) -> io::Result<Self> {
-        let mmap = unsafe { Mmap::map(file)? };
+    fn new(file: File, path: P) -> io::Result<Self> {
+        let mmap = unsafe { Mmap::map(&file)? };
 
-        Ok(Self { mmap, path })
+        Ok(Self { mmap, file, path })
     }
 
     /// Opens a file and returns a FileReader for it.
     /// The file is identified by its path.
     pub fn open(path: P) -> io::Result<Self> {
         let file = open_as_read(path.as_ref())?;
-        Self::new(&file, path)
+        Self::new(file, path)
     }
 
     /// Opens a file at the provided path and returns a FileReader for it.
-    pub fn open_file_at_path(file: &File, path: P) -> io::Result<Self> {
+    pub fn open_file_at_path(file: File, path: P) -> io::Result<Self> {
         Self::new(file, path)
     }
 
@@ -163,6 +164,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     }
 
     /// Returns length of the file data.
+    /// Uses mmap length rather than file Metadata to gurantee deterministic results.
     pub fn len(&self) -> usize {
         self.mmap.len()
     }
@@ -202,6 +204,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     pub fn as_writer(self) -> io::Result<FileWriter<P>> {
         Ok(FileWriter {
             mmap: self.mmap.make_mut()?,
+            file: self.file,
             path: self.path,
         })
     }
@@ -292,7 +295,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// Compares the FileReader's file to another file by their hashes outputted by the given hash
     /// function.
     /// It takes a File object `file`, and returns true if the files are identical (based on their hashes), false otherwise.
-    pub fn compare_to_file_with<H: Digest>(&self, file: &File) -> bool {
+    pub fn compare_to_file_with<H: Digest>(&self, file: File) -> bool {
         if let Ok(file_reader) = FileReader::open_file(file) {
             self.hash_with::<H>() == file_reader.hash_with::<H>()
         } else {
@@ -329,7 +332,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     #[cfg(feature = "sha3_256")]
     /// Compares the FileReader's file to another file by their SHA3-256 hashes.
     /// It takes a File object `file`, and returns true if the files are identical (based on their hashes), false otherwise.
-    pub fn compare_to_file(&self, file: &File) -> bool {
+    pub fn compare_to_file(&self, file: File) -> bool {
         self.compare_to_file_with::<Sha3_256>(file)
     }
 }

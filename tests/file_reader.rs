@@ -55,7 +55,7 @@ fn test_open_file() {
         .read(true)
         .open(tempdir.path().join("test_file"))
         .unwrap();
-    let file_reader = FileReader::open_file(&file).unwrap();
+    let file_reader = FileReader::open_file(file).unwrap();
     assert_eq!(file_reader.read_to_string(), "test file\n");
 }
 
@@ -303,7 +303,7 @@ fn test_compare_to_file() {
                 .read(true)
                 .open(tempdir_path.join("test_file2"))
                 .unwrap();
-            assert!(file_reader.compare_to_file(&file));
+            assert!(file_reader.compare_to_file(file));
         }
     );
 }
@@ -369,13 +369,14 @@ fn test_as_writer() {
     let write_file_path_buf = tempdir_path.join("write_file");
     let write_file_path = write_file_path_buf.as_path();
     let write_file = file::open_as_write(write_file_path).unwrap();
-    let file_reader = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
+    let file_reader = FileReader::open_file_at_path(write_file, write_file_path).unwrap();
     let mut writer = file_reader.as_writer().unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
     let reader = writer.to_reader().unwrap();
     assert_eq!(reader.read_to_string(), "testwrite\n");
 
-    let new_file_reader = FileReader::open_file_at_path(&write_file, &write_file_path).unwrap();
+    let write_file = file::open_as_write(write_file_path).unwrap();
+    let new_file_reader = FileReader::open_file_at_path(write_file, &write_file_path).unwrap();
     assert_eq!(new_file_reader.read_to_string(), "testwrite\n");
 }
 
@@ -386,14 +387,16 @@ fn test_mmap_mut() {
     let write_file_path_buf = tempdir_path.join("write_file");
     let write_file_path = write_file_path_buf.as_path();
     let write_file = file::open_as_write(write_file_path).unwrap();
-    let mut writer = FileWriter::open_file_at_path(&write_file, write_file_path).unwrap();
+    let mut writer = FileWriter::open_file_at_path(write_file, write_file_path).unwrap();
     writer.overwrite(b"testwrite\n").unwrap();
-    let file_reader = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
+    let write_file = file::open_as_write(write_file_path).unwrap();
+    let file_reader = FileReader::open_file_at_path(write_file, write_file_path).unwrap();
     let mut mmap_mut = file_reader.mmap_mut().unwrap();
     assert_eq!(&mmap_mut[..], b"testwrite\n");
     mmap_mut.copy_from_slice(b"newwrite2\n");
     assert_eq!(&mmap_mut[..], b"newwrite2\n");
 
-    let file_reader_new = FileReader::open_file_at_path(&write_file, write_file_path).unwrap();
+    let write_file = file::open_as_write(write_file_path).unwrap();
+    let file_reader_new = FileReader::open_file_at_path(write_file, write_file_path).unwrap();
     assert_eq!(file_reader_new.read_to_string(), "newwrite2\n");
 }

@@ -26,7 +26,7 @@ fn test_open_file() {
         .create(true)
         .open(tempdir_path.join("test_open_file"))
         .unwrap();
-    let mut file_writer = FileWriter::open_file(&file).unwrap();
+    let mut file_writer = FileWriter::open_file(file).unwrap();
     file_writer.overwrite("Hello, world!").unwrap();
     let file_reader = FileReader::open(tempdir_path.join("test_open_file")).unwrap();
     assert_eq!(file_reader.read_to_string(), "Hello, world!");
@@ -192,13 +192,13 @@ fn test_find_replace_all() {
 }
 
 #[test]
-fn test_file() {
+fn test_open_new_file() {
     file_writer_test!(
         "test_file",
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, _file_reader| {
-            let file = file_writer.file().unwrap();
-            let file_reader = FileReader::open_file_at_path(&file, file_writer.path).unwrap();
+            let file = file_writer.open_new_file().unwrap();
+            let file_reader = FileReader::open_file_at_path(file, file_writer.path).unwrap();
             assert_eq!(file_reader.read_to_string(), "Hello, world!");
         }
     );

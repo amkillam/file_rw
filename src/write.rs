@@ -1,5 +1,5 @@
 use crate::{file::open_as_write, FileReader};
-use memmap2::{Mmap, MmapMut};
+use memmap2::{Mmap, MmapMut, RemapOptions};
 use std::{fmt, fs::File, io, path::Path};
 
 /// `FileWriter` is a structure that allows writing to a file.
@@ -7,6 +7,7 @@ use std::{fmt, fs::File, io, path::Path};
 pub struct FileWriter<P: AsRef<Path> + Send + Sync> {
     pub mmap: MmapMut,
     pub path: P,
+    pub file: File,
 }
 
 /// Writes "FileWriter({path})" to the provided formatter.
@@ -28,7 +29,7 @@ use filepath::FilePath;
 #[cfg(feature = "filepath")]
 impl FileWriter<std::path::PathBuf> {
     /// Opens a file and returns a `FileWriter` instance.
-    pub fn open_file(file: &File) -> io::Result<Self> {
+    pub fn open_file(file: File) -> io::Result<Self> {
         let path = file.path()?;
 
         Self::new(file, path)
@@ -38,21 +39,21 @@ impl FileWriter<std::path::PathBuf> {
 impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     /// Creates a new `FileWriter` instance.
     /// It takes a reference to a `File` and a path, and maps the file into memory.
-    fn new(file: &File, path: P) -> io::Result<Self> {
-        let mmap = unsafe { MmapMut::map_mut(file)? };
+    fn new(file: File, path: P) -> io::Result<Self> {
+        let mmap = unsafe { MmapMut::map_mut(&file)? };
 
-        Ok(Self { mmap, path })
+        Ok(Self { mmap, path, file })
     }
 
     /// Opens a file at the provided path and returns a `FileWriter` instance.
-    pub fn open_file_at_path(file: &File, path: P) -> io::Result<Self> {
+    pub fn open_file_at_path(file: File, path: P) -> io::Result<Self> {
         Self::new(file, path)
     }
 
     /// Opens a file in write mode and returns a `FileWriter` instance.
     pub fn open(path: P) -> io::Result<Self> {
         let file = open_as_write(path.as_ref())?;
-        Self::new(&file, path)
+        Self::new(file, path)
     }
 
     /// Writes bytes to the file.
@@ -70,20 +71,20 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
 
     /// Appends bytes to the file, extending the file length if necessary.
     pub fn append<B: AsRef<[u8]>>(&mut self, bytes: B) -> io::Result<&Self> {
-        let current_len = self.mmap.len();
+        let current_len = self.len();
         let bytes = bytes.as_ref();
         let new_len = current_len + bytes.len();
-        self.set_len(new_len as u64)?;
+        self.set_len(new_len)?;
         self.mmap[current_len..new_len].copy_from_slice(bytes);
         Ok(self)
     }
 
-    /// Overwrites the entire content of the file with the provided bytes. The file's length is
-    /// extended if the provided bytes are longer than the current file length.
+    /// Overwrites the entire content of the file with the provided bytes. The file's length is set
+    /// to the length of the provided bytes.
     pub fn overwrite<B: AsRef<[u8]>>(&mut self, bytes: B) -> io::Result<&Self> {
         let bytes = bytes.as_ref();
         let len = bytes.len();
-        self.set_len(len as u64)?;
+        self.set_len(len)?;
         self.write(bytes);
         Ok(self)
     }
@@ -123,7 +124,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         let replace = replace.as_ref();
         if replace.len() > find.len() {
             let current_bytes = self.mmap[offset + find.len()..].to_vec();
-            self.extend_len_by((replace.len() - find.len()) as u64)?;
+            self.extend_len_by(replace.len() - find.len())?;
             self.mmap[offset..offset + replace.len()].copy_from_slice(replace);
             self.mmap[offset + replace.len()..].copy_from_slice(&current_bytes);
         } else {
@@ -202,9 +203,14 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
-    /// Returns a `File` object that represents the file being written to.
-    pub fn file(&mut self) -> io::Result<File> {
+    /// Returns a newly-opened `File` object that represents the file being written to.
+    pub fn open_new_file(&mut self) -> io::Result<File> {
         open_as_write(self.path.as_ref())
+    }
+
+    /// Returns the underlying file object.
+    pub fn file(self) -> File {
+        self.file
     }
 
     /// Checks if the file has a length of zero.
@@ -213,15 +219,21 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     }
 
     /// Sets the length of the file.
-    pub fn set_len(&mut self, len: u64) -> io::Result<&mut Self> {
-        let file = self.file()?;
-        file.set_len(len)?;
-        self.mmap = unsafe { MmapMut::map_mut(&file)? };
+    pub fn set_len(&mut self, len: usize) -> io::Result<&mut Self> {
+        self.file.set_len(len as u64)?;
+        #[cfg(target_family = "unix")]
+        unsafe {
+            self.mmap.remap(len as u64 as usize, RemapOptions::new())?
+        };
+        #[cfg(not(target_family = "unix"))]
+        {
+            self.mmap = unsafe { MmapMut::map_mut(&self.file)? };
+        }
         Ok(self)
     }
 
     /// Extends the length of the file by the provided length.
-    pub fn extend_len_by(&mut self, len: u64) -> io::Result<&mut Self> {
+    pub fn extend_len_by(&mut self, len: usize) -> io::Result<&mut Self> {
         let current_len = self.len();
         let new_len = current_len + len;
         self.set_len(new_len)?;
@@ -247,7 +259,8 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
 
     /// Converts the `FileWriter` into a `FileReader` by opening the file as read-only.
     pub fn to_reader(self) -> io::Result<FileReader<P>> {
-        FileReader::open(self.path)
+        let file = open_as_write(self.path.as_ref())?;
+        FileReader::open_file_at_path(file, self.path)
     }
 
     /// Converts the `FileWriter` into a `FileReader`.
@@ -258,6 +271,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     pub fn as_reader(self) -> io::Result<FileReader<P>> {
         Ok(FileReader {
             mmap: self.mmap.make_read_only()?,
+            file: self.file,
             path: self.path,
         })
     }
