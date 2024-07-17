@@ -128,6 +128,7 @@
 
 pub mod file; //mainly pub for use in tests
 pub mod read;
+pub mod utils;
 mod write;
 
 pub use read::FileReader;
