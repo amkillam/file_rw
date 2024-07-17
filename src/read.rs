@@ -146,7 +146,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
 
     /// Reads the entire file to a string.
     pub fn read_to_string(&self) -> String {
-        self.bytes().iter().map(|c| *c as char).collect::<String>()
+        self.as_slice().iter().map(|c| *c as char).collect::<String>()
     }
 
     /// Returns a reference to the FileReader's mmap
@@ -169,8 +169,14 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
         self.mmap.len()
     }
 
+    /// Returns true if the file data is empty.
+    /// Uses mmap length rather than file Metadata to gurantee deterministic results.
+    pub fn is_empty(&self) -> bool {
+        self.mmap.is_empty()
+    }
+
     /// Returns a slice of bytes representing the file data.
-    pub fn bytes(&self) -> &[u8] {
+    pub fn as_slice(&self) -> &[u8] {
         &self.mmap[..]
     }
 
@@ -213,7 +219,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// It takes a byte sequence `pattern` and returns the index of the first occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn find_bytes<B: AsRef<[u8]>>(&self, pattern: B) -> Option<usize> {
-        find_bytes(self.bytes(), pattern)
+        find_bytes(self.as_slice(), pattern)
     }
 
     #[cfg(feature = "search")]
@@ -221,7 +227,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// It takes a byte sequence `pattern` and returns the index of the last occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn rfind_bytes<B: AsRef<[u8]>>(&self, pattern: B) -> Option<usize> {
-        rfind_bytes(self.bytes(), pattern)
+        rfind_bytes(self.as_slice(), pattern)
     }
 
     #[cfg(feature = "search")]
@@ -229,20 +235,20 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// It takes a byte sequence `pattern` and an index `n`, and returns the index of the nth occurrence.
     /// If the byte sequence is not found, it returns None.
     pub fn find_bytes_nth<B: AsRef<[u8]>>(&self, pattern: B, n: usize) -> Option<usize> {
-        find_bytes_nth(self.bytes(), pattern, n)
+        find_bytes_nth(self.as_slice(), pattern, n)
     }
 
     #[cfg(feature = "search")]
     /// Finds the nth occurrence of a byte sequence in the file data, in reverse order.
     pub fn rfind_bytes_nth<B: AsRef<[u8]>>(&self, pattern: B, n: usize) -> Option<usize> {
-        rfind_bytes_nth(self.bytes(), pattern, n)
+        rfind_bytes_nth(self.as_slice(), pattern, n)
     }
 
     #[cfg(feature = "search")]
     /// Finds all occurrences of a byte sequence in the file data.
     /// It takes a byte sequence `pattern` and returns a vector of indices where the byte sequence is found.
     pub fn find_bytes_all<B: AsRef<[u8]>>(&self, pattern: B) -> Vec<usize> {
-        find_bytes_all(self.bytes(), pattern)
+        find_bytes_all(self.as_slice(), pattern)
     }
 
     #[cfg(feature = "search")]
@@ -250,7 +256,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// It takes a byte sequence `pattern` and returns a vector of indices where the byte sequence is found.
     /// The indices are sorted in reverse order.
     pub fn rfind_bytes_all<B: AsRef<[u8]>>(&self, pattern: B) -> Vec<usize> {
-        rfind_bytes_all(self.bytes(), pattern)
+        rfind_bytes_all(self.as_slice(), pattern)
     }
 
     #[cfg(feature = "hash")]
@@ -263,7 +269,7 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     #[cfg(feature = "hash")]
     /// Computes the hash of the file data using a given hash function.
     pub fn hash_with<H: Digest>(&self) -> Output<H> {
-        H::digest(self.bytes())
+        H::digest(self.as_slice())
     }
 
     #[cfg(feature = "hash")]
@@ -353,7 +359,7 @@ impl<P: AsRef<Path> + Send + Sync> IntoIterator for FileReader<P> {
     /// Converts the FileReader into an iterator over the bytes of the file data.
     #[allow(clippy::unnecessary_to_owned)] //Not actually unnecessary in this case
     fn into_iter(self) -> Self::IntoIter {
-        self.bytes().to_vec().into_iter()
+        self.as_slice().to_vec().into_iter()
     }
 }
 
@@ -369,6 +375,6 @@ impl<P: AsRef<Path> + Send + Sync> PartialEq for FileReader<P> {
 impl<P: AsRef<Path> + Send + Sync> PartialEq for FileReader<P> {
     /// Compares two FileReader instances for equality based on their file data.
     fn eq(&self, other: &Self) -> bool {
-        self.bytes() == other.bytes()
+        self.as_slice() == other.as_slice()
     }
 }

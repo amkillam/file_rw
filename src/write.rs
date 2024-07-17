@@ -89,13 +89,18 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
         Ok(self)
     }
 
-    ///Returns length of the file data
+    /// Returns length of the file data
     pub fn len(&self) -> usize {
         self.mmap.len()
     }
 
+    /// Returns true if the file is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns a mutable reference to the bytes of the file.
-    pub fn bytes_mut(&mut self) -> &mut [u8] {
+    pub fn as_slice_mut(&mut self) -> &mut [u8] {
         &mut self.mmap[..]
     }
 
@@ -211,11 +216,6 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     /// Returns the underlying file object.
     pub fn file(self) -> File {
         self.file
-    }
-
-    /// Checks if the file has a length of zero.
-    pub fn is_empty(&mut self) -> bool {
-        self.len() == 0
     }
 
     /// Sets the length of the file.

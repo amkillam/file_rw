@@ -70,11 +70,11 @@ fn test_read_to_string() {
 }
 
 #[test]
-fn test_bytes() {
+fn test_as_slice() {
     file_reader_test!(
         "test_file",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
-            assert_eq!(file_reader.bytes(), b"test file\n");
+            assert_eq!(file_reader.as_slice(), b"test file\n");
         }
     );
 }
@@ -176,7 +176,7 @@ fn test_hash_to_string() {
 
 #[cfg(feature = "search")]
 #[test]
-fn test_find_bytes() {
+fn test_find_as_slice() {
     file_reader_test!(
         "test_find_bytes",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {
@@ -189,7 +189,7 @@ fn test_find_bytes() {
 
 #[cfg(feature = "search")]
 #[test]
-fn test_rfind_bytes() {
+fn test_rfind_as_slice() {
     file_reader_test!(
         "test_find_bytes",
         |tempdir, tempdir_path, test_file_path, _file_writer, file_reader| {

@@ -225,7 +225,7 @@ fn test_mmap_mut() {
         "Hello, world!",
         |tempdir, tempdir_path, test_file_path, file_writer, file_reader| {
             let mmap = file_writer.mmap_mut();
-            mmap[..].copy_from_slice("Hullo, world!".as_bytes());
+            mmap[..].copy_from_slice(b"Hullo, world!");
             assert_eq!(file_reader.read_to_string(), "Hullo, world!");
         }
     );
