@@ -146,7 +146,10 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
 
     /// Reads the entire file to a string.
     pub fn read_to_string(&self) -> String {
-        self.as_slice().iter().map(|c| *c as char).collect::<String>()
+        self.as_slice()
+            .iter()
+            .map(|c| *c as char)
+            .collect::<String>()
     }
 
     /// Returns a reference to the FileReader's mmap
@@ -340,6 +343,12 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     /// It takes a File object `file`, and returns true if the files are identical (based on their hashes), false otherwise.
     pub fn compare_to_file(&self, file: File) -> bool {
         self.compare_to_file_with::<Sha3_256>(file)
+    }
+}
+
+impl<P: AsRef<Path> + Send + Sync> AsRef<[u8]> for FileReader<P> {
+    fn as_ref(&self) -> &[u8] {
+        self.as_slice()
     }
 }
 

@@ -270,6 +270,18 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
     }
 }
 
+impl<P: AsRef<Path> + Send + Sync> AsRef<[u8]> for FileWriter<P> {
+    fn as_ref(&self) -> &[u8] {
+        self.bytes()
+    }
+}
+
+impl<P: AsRef<Path> + Send + Sync> AsMut<[u8]> for FileWriter<P> {
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.as_slice_mut()
+    }
+}
+
 impl<P: AsRef<Path> + Send + Sync> io::Write for FileWriter<P> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.overwrite(buf)?;
