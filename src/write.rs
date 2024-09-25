@@ -284,7 +284,7 @@ impl<P: AsRef<Path> + Send + Sync> AsMut<[u8]> for FileWriter<P> {
 
 impl<P: AsRef<Path> + Send + Sync> io::Write for FileWriter<P> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.overwrite(buf)?;
+        self.append(buf)?;
         Ok(buf.len())
     }
 
