@@ -366,7 +366,7 @@ impl<P: AsRef<Path> + Send + Sync> io::Read for FileReader<P> {
         }
 
         let copy_len = std::cmp::min(buf.len(), self.len() - self.read_index);
-        buf[self.read_index..copy_len].copy_from_slice(&self.mmap[..copy_len]);
+        buf[..copy_len].copy_from_slice(&self.mmap[self.read_index..self.read_index + copy_len]);
         self.read_index += copy_len;
         Ok(copy_len)
     }
