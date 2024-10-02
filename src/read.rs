@@ -107,6 +107,7 @@ pub struct FileReader<P: AsRef<Path> + Send + Sync> {
     pub mmap: Mmap,
     pub path: P,
     pub file: File,
+    pub(crate) read_index: usize,
 }
 
 impl<P: AsRef<Path> + Send + Sync> fmt::Display for FileReader<P> {
@@ -129,7 +130,12 @@ impl<P: AsRef<Path> + Send + Sync> FileReader<P> {
     fn new(file: File, path: P) -> io::Result<Self> {
         let mmap = unsafe { Mmap::map(&file)? };
 
-        Ok(Self { mmap, file, path })
+        Ok(Self {
+            mmap,
+            file,
+            path,
+            read_index: 0,
+        })
     }
 
     /// Opens a file and returns a FileReader for it.
@@ -355,8 +361,13 @@ impl<P: AsRef<Path> + Send + Sync> AsRef<[u8]> for FileReader<P> {
 impl<P: AsRef<Path> + Send + Sync> io::Read for FileReader<P> {
     /// Reads the file data into a buffer.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let copy_len = std::cmp::min(buf.len(), self.len());
-        buf[..copy_len].copy_from_slice(&self.mmap[..copy_len]);
+        if self.len() == self.read_index {
+            return Ok(0);
+        }
+
+        let copy_len = std::cmp::min(buf.len(), self.len() - self.read_index);
+        buf[self.read_index..copy_len].copy_from_slice(&self.mmap[..copy_len]);
+        self.read_index += copy_len;
         Ok(copy_len)
     }
 }

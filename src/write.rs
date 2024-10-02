@@ -266,6 +266,7 @@ impl<P: AsRef<Path> + Send + Sync> FileWriter<P> {
             mmap: self.mmap.make_read_only()?,
             file: self.file,
             path: self.path,
+            read_index: 0,
         })
     }
 }
